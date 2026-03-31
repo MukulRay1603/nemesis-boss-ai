@@ -1,0 +1,47 @@
+{
+    "name": "root",
+    "metadata": {
+        "timer_format_version": "0.1.0",
+        "start_time_seconds": "1774921307",
+        "python_version": "3.10.8 (tags/v3.10.8:aaaf517, Oct 11 2022, 16:50:30) [MSC v.1933 64 bit (AMD64)]",
+        "command_line_arguments": "D:\\Projects\\Nemesis\\nemesis-env\\Scripts\\mlagents-learn config/boss_ppo.yaml --env=D:\\Unity Projects\\Nemesis-ai\\Build\\NemesisGame.exe --run-id=test02 --num-envs=1 --time-scale=20",
+        "mlagents_version": "0.30.0",
+        "mlagents_envs_version": "0.30.0",
+        "communication_protocol_version": "1.5.0",
+        "pytorch_version": "2.0.1+cu117",
+        "numpy_version": "1.23.5",
+        "end_time_seconds": "1774921309"
+    },
+    "total": 1.927637399872765,
+    "count": 1,
+    "self": 0.003927899757400155,
+    "children": {
+        "run_training.setup": {
+            "total": 0.06756029999814928,
+            "count": 1,
+            "self": 0.06756029999814928
+        },
+        "TrainerController.start_learning": {
+            "total": 1.8561492001172155,
+            "count": 1,
+            "self": 0.0002977002877742052,
+            "children": {
+                "TrainerController._reset_env": {
+                    "total": 1.8558443000074476,
+                    "count": 1,
+                    "self": 1.8558443000074476
+                },
+                "trainer_threads": {
+                    "total": 6.998889148235321e-07,
+                    "count": 1,
+                    "self": 6.998889148235321e-07
+                },
+                "TrainerController._save_models": {
+                    "total": 6.4999330788850784e-06,
+                    "count": 1,
+                    "self": 6.4999330788850784e-06
+                }
+            }
+        }
+    }
+}
