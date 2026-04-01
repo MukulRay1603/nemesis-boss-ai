@@ -1,0 +1,29 @@
+{
+    "BossAgent": {
+        "checkpoints": [
+            {
+                "steps": 14184,
+                "file_path": "results\\boss_overnight2\\BossAgent\\BossAgent-14184.onnx",
+                "reward": 8.779166519641876,
+                "creation_time": 1775011402.5119348,
+                "auxillary_file_paths": [
+                    "results\\boss_overnight2\\BossAgent\\BossAgent-14184.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 14184,
+            "file_path": "results\\boss_overnight2\\BossAgent.onnx",
+            "reward": 8.779166519641876,
+            "creation_time": 1775011402.5119348,
+            "auxillary_file_paths": [
+                "results\\boss_overnight2\\BossAgent\\BossAgent-14184.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "0.30.0",
+        "torch_version": "2.0.1+cu117"
+    }
+}

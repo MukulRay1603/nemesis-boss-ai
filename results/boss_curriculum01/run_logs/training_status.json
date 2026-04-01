@@ -1,0 +1,29 @@
+{
+    "BossAgent": {
+        "checkpoints": [
+            {
+                "steps": 18379,
+                "file_path": "results\\boss_curriculum01\\BossAgent\\BossAgent-18379.onnx",
+                "reward": 5.529014040571703,
+                "creation_time": 1775009343.5407133,
+                "auxillary_file_paths": [
+                    "results\\boss_curriculum01\\BossAgent\\BossAgent-18379.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 18379,
+            "file_path": "results\\boss_curriculum01\\BossAgent.onnx",
+            "reward": 5.529014040571703,
+            "creation_time": 1775009343.5407133,
+            "auxillary_file_paths": [
+                "results\\boss_curriculum01\\BossAgent\\BossAgent-18379.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "0.30.0",
+        "torch_version": "2.0.1+cu117"
+    }
+}
