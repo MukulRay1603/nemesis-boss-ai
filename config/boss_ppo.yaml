@@ -14,9 +14,7 @@ behaviors:
       normalize: true
       hidden_units: 256
       num_layers: 2
-      use_recurrent: true
-      sequence_length: 64
-      memory_size: 128
+      use_recurrent: false
     reward_signals:
       extrinsic:
         gamma: 0.99
