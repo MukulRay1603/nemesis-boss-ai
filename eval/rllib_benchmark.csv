@@ -1,0 +1,5 @@
+num_workers,total_steps,wall_time_sec,final_reward_mean,speedup_vs_1worker
+1,52000,77.22,8.184,1.0
+2,52000,50.83,7.7682,1.52
+4,52000,35.54,8.1187,2.17
+8,52000,29.51,8.047,2.62
