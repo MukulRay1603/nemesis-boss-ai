@@ -82,3 +82,13 @@ results/test03/
 .DS_Store
 Thumbs.db
 *.log
+
+# RLlib venv
+rllib-env/
+
+# MLflow local runs
+mlruns/
+mlartifacts/
+
+# Eval outputs (committed individually, not the whole folder auto-tracked)
+*.csv.bak
