@@ -1,35 +1,82 @@
 # ============================================================
 # Nemesis Boss AI — .gitignore
+# Based on github.com/github/gitignore/blob/main/Unity.gitignore
 # ============================================================
 
 # ------------------------------------------------------------
-# Unity — generated folders, never commit
+# Unity — generated folders (never commit these)
 # ------------------------------------------------------------
-Unity Project/Library/
-Unity Project/Temp/
-Unity Project/obj/
-Unity Project/Build/
-Unity Project/Builds/
-Unity Project/Logs/
-Unity Project/UserSettings/
-Unity Project/.vs/
-Unity Project/sysinfo.txt
-Unity Project/mono_crash.*
+Unity Project/[Ll]ibrary/
+Unity Project/[Tt]emp/
+Unity Project/[Oo]bj/
+Unity Project/[Bb]uild/
+Unity Project/[Bb]uilds/
+Unity Project/[Ll]ogs/
+Unity Project/[Uu]serSettings/
+Unity Project/[Mm]emoryCaptures/
+Unity Project/[Rr]ecordings/
+Unity Project/[Ee]xportedObj/
 
-# Unity file types
-Unity Project/*.sln
+# Unity auto-generated project / IDE files
 Unity Project/*.csproj
+Unity Project/*.sln
 Unity Project/*.suo
 Unity Project/*.user
-Unity Project/*.log
-Unity Project/*.apk
-Unity Project/*.aab
+Unity Project/*.userprefs
+Unity Project/*.pidb
+Unity Project/*.booproj
+Unity Project/*.svd
+Unity Project/*.pdb
+Unity Project/*.mdb
+Unity Project/*.opendb
+Unity Project/*.VC.db
+Unity Project/*.pidb.meta
+Unity Project/*.pdb.meta
+Unity Project/*.mdb.meta
+Unity Project/sysinfo.txt
+Unity Project/mono_crash.*
+Unity Project/*.blend1
+Unity Project/*.blend1.meta
 Unity Project/*.unitypackage
 Unity Project/*.unitypackage.meta
+Unity Project/*.apk
+Unity Project/*.aab
+Unity Project/*.app
+Unity Project/crashlytics-build.properties
 
-# TextMesh Pro package examples (imported via Package Manager, not project code)
-Unity Project/Assets/TextMesh Pro/
-Unity Project/Assets/TextMesh Pro.meta
+# IDE folders
+Unity Project/.vs/
+Unity Project/.vsconfig
+Unity Project/.idea/
+Unity Project/.consulo/
+Unity Project/.gradle/
+Unity Project/.utmp/
+
+# ------------------------------------------------------------
+# Unity — template / boilerplate we don't use
+# ------------------------------------------------------------
+Unity Project/Assets/Scenes/SampleScene.unity
+Unity Project/Assets/Scenes/SampleScene.unity.meta
+Unity Project/Assets/Settings/SampleSceneProfile.asset
+Unity Project/Assets/Settings/SampleSceneProfile.asset.meta
+Unity Project/Assets/TutorialInfo/
+Unity Project/Assets/TutorialInfo.meta
+Unity Project/Assets/Readme.asset
+Unity Project/Assets/Readme.asset.meta
+
+# TextMesh Pro — ignore example scenes and docs only.
+# Resources/, Fonts/, and Shaders/ are required for runtime text rendering.
+Unity Project/Assets/TextMesh Pro/Examples & Extras/
+Unity Project/Assets/TextMesh Pro/Examples & Extras.meta
+Unity Project/Assets/TextMesh Pro/Documentation/
+Unity Project/Assets/TextMesh Pro/Documentation.meta
+
+# ------------------------------------------------------------
+# Results — duplicate nested ONNXes (top-level copy is canonical)
+# and checkpoint pointer files (not needed for inference)
+# ------------------------------------------------------------
+results/*/BossAgent/*.onnx
+results/*/BossAgent/checkpoint.pt
 
 # ------------------------------------------------------------
 # Python
@@ -38,6 +85,9 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.egg-info/
+dist/
+.pytest_cache/
 nemesis-env/
 rllib-env/
 venv/
@@ -60,5 +110,5 @@ mlartifacts/
 # ------------------------------------------------------------
 .DS_Store
 Thumbs.db
-*.log
 .vscode/
+*.log

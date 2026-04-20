@@ -1,0 +1,18 @@
+# ============================================================
+# Nemesis Boss AI — Python dependencies
+# Tested on Python 3.10.8
+# ============================================================
+
+# --- Taunt bridge (required to run the LLM layer) -----------
+groq
+python-dotenv
+nemoguardrails==0.8.0
+
+# --- Evaluation (required to run eval/run_eval.py) ----------
+onnxruntime
+gymnasium
+numpy
+
+# --- Distributed training benchmark (train_rllib.py) --------
+# Install separately if you want to re-run training benchmarks:
+#   pip install "ray[rllib]" torch mlflow

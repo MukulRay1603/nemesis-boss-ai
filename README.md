@@ -8,8 +8,8 @@ A reinforcement learning-driven boss combat AI for Unity. The boss learns adapti
 
 Nemesis combines three systems:
 
-1. **RL Combat Brain** — A PPO policy (trained with ML-Agents, deployed via Unity Sentis) drives a 5-state combat FSM: Idle → Telegraph → Attack → Recovery → Dodge. The boss reads 14 observations per frame and outputs one of four actions.
-2. **Phase Escalation** — As boss HP drops, speed and aggression scale up across three phases, culminating in an enraged state with visual feedback.
+1. **RL Combat Brain** — A PPO policy trained with ML-Agents and deployed via Unity Sentis drives a 5-state combat FSM: Idle → Telegraph → Attack → Recovery → Dodge. The boss reads 14 observations per frame and outputs one of four discrete actions.
+2. **Phase Escalation** — As boss HP drops, speed and aggression scale up across three phases, culminating in an enraged state with a visual pulse effect.
 3. **LLM Taunt Layer** — A Python TCP bridge streams live game state to Groq (`llama-3.3-70b-versatile`), which generates in-character taunts filtered through NeMo Guardrails before being displayed in a Genshin-style dialogue panel.
 
 ---
@@ -18,10 +18,10 @@ Nemesis combines three systems:
 
 ```
 Unity (20 Hz FixedUpdate)
-├── BossAgent.cs      — Sentis ONNX inference + 5-state FSM
+├── BossAgent.cs        — Sentis ONNX inference + 5-state FSM
 ├── PlayerController.cs — Autonomous player AI (5-state FSM)
-├── TauntDisplay.cs   — TCP bridge to Python + typewriter UI
-└── ScriptedBoss.cs   — Rule-based FSM baseline (for evaluation)
+├── TauntDisplay.cs     — TCP bridge to Python + typewriter UI
+└── ScriptedBoss.cs     — Rule-based FSM baseline (used in evaluation)
 
 TCP localhost:9999
 └── llm_layer/state_bridge.py
@@ -30,6 +30,59 @@ TCP localhost:9999
     ├── Applies NeMo Guardrails output filtering
     └── Returns taunt string to Unity
 ```
+
+---
+
+## Quick Start
+
+### Requirements
+
+| Tool | Version |
+|------|---------|
+| Unity | 2022.3.62f3 |
+| Python | 3.10+ |
+| Groq API key | [console.groq.com](https://console.groq.com) |
+
+### 1 — Clone and set up Python
+
+```bash
+git clone <repo-url>
+cd nemesis-boss-ai
+
+python -m venv venv
+# Windows
+.\venv\Scripts\Activate.ps1
+# macOS / Linux
+source venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+### 2 — Configure secrets
+
+```bash
+cp .env.example .env
+# Edit .env and set your Groq API key
+```
+
+### 3 — Open the Unity project
+
+1. Open **Unity Hub** → Add project → select the `Unity Project/` folder.
+2. Unity will auto-resolve all packages from `manifest.json` (Sentis, URP, TextMesh Pro). This may take a minute on first open.
+3. If prompted to import **TextMesh Pro Essentials**, click **Import TMP Essentials**.
+4. Open `Assets/Scenes/CombatScene.unity`.
+
+### 4 — Start the taunt bridge
+
+```bash
+python llm_layer/state_bridge.py
+```
+
+Leave this running. Unity connects to it over TCP on port 9999.
+
+### 5 — Press Play
+
+The boss runs the RL policy via Sentis. Every 6 seconds, game state is sent to the bridge and a taunt appears in the dialogue panel.
 
 ---
 
@@ -65,7 +118,7 @@ The combat arena is **20 × 20 units** with solid walls on all four sides.
 
 Phase 2 triggers a scale-pulse visual effect. The special attack (action 3) is masked out unless stamina ≥ 20 or phase ≥ 2.
 
-### State Machine Timings
+### Combat FSM Timings
 
 | State | Duration | Behaviour |
 |-------|----------|-----------|
@@ -97,9 +150,9 @@ Phase 2 triggers a scale-pulse visual effect. The special attack (action 3) is m
 
 ## Training
 
-The production model (`results/boss_v3/`) was trained using ML-Agents PPO over **300,000 steps** (~31 minutes on CPU).
+The production model (`results/boss_v3/`) was trained using ML-Agents PPO over **300,000 steps** (~31 minutes).
 
-**Key hyperparameters** (`config/boss_ppo.yaml`):
+### Hyperparameters (`config/boss_ppo.yaml`)
 
 | Parameter | Value |
 |-----------|-------|
@@ -112,7 +165,7 @@ The production model (`results/boss_v3/`) was trained using ML-Agents PPO over *
 | Network | 2 × 256 FC, normalised inputs |
 | Max steps | 300 000 |
 
-**Reward shaping:**
+### Reward Shaping
 
 | Event | Reward |
 |-------|--------|
@@ -122,37 +175,46 @@ The production model (`results/boss_v3/`) was trained using ML-Agents PPO over *
 | Kill player | +1.00 |
 | Idle (per step) | −0.005 |
 
-**Curriculum** (`config/curriculum.yaml`) optionally progresses player speed from 1.0 → 2.0 → 3.0 m/s as reward thresholds are cleared.
+### Curriculum (`config/curriculum.yaml`)
 
-**Final reward stats (1 322 episodes):**
+Optionally progresses player speed from 1.0 → 2.0 → 3.0 m/s as reward thresholds are reached.
 
-| Metric | Value |
-|--------|-------|
-| Max | 22.71 |
-| Min | −19.57 |
-| Running average | 12.86 |
-| Final episode | 16.18 |
+### Training Results
 
-Three model checkpoints are included: `boss_curriculum01`, `boss_final1`, and `boss_v3` (production).
+| Run | Steps | Final Reward | Notes |
+|-----|-------|-------------|-------|
+| `boss_curriculum01` | 18 379 | 5.53 | Early stop — used to verify curriculum setup |
+| `boss_final1` | 300 035 | 16.66 | Full run, flat reward schedule |
+| `boss_v3` ✓ | 300 030 | 14.93 | **Production** — deployed in Unity |
+
+All three ONNX models and their PyTorch checkpoints are included in `results/` for comparison.
+
+### Re-running Training
+
+```bash
+# Install training dependencies
+pip install "ray[rllib]" torch mlflow
+
+# ML-Agents training (requires Unity Editor open with CombatScene)
+mlagents-learn config/boss_ppo.yaml --run-id boss_v4
+
+# Distributed PPO benchmark (standalone Python, no Unity needed)
+python train_rllib.py
+```
 
 ---
 
 ## Evaluation
 
-`eval/run_eval.py` runs 200 episodes each for the RL policy and the FSM baseline, logging outcome, duration, and final HP to `eval/results.csv`.
+`eval/run_eval.py` runs 200 episodes each for the RL policy and the FSM baseline, comparing win rates without needing Unity open.
 
 ```bash
-cd eval
-python run_eval.py
+python eval/run_eval.py
 ```
 
-`train_rllib.py` benchmarks distributed PPO scaling on Ray RLlib across 1, 2, 4, and 8 workers. Results are logged to `eval/rllib_benchmark.csv` and MLflow.
+Results are written to `eval/results.csv`. The RLlib distributed training benchmark results are in `eval/rllib_benchmark.csv`.
 
-```bash
-python train_rllib.py
-```
-
-**Benchmark results (50 000 steps each):**
+### Distributed Training Benchmark (50 000 steps each)
 
 | Workers | Wall time (s) | Speedup |
 |---------|--------------|---------|
@@ -165,26 +227,23 @@ python train_rllib.py
 
 ## LLM Taunt Layer
 
-The bridge (`llm_layer/state_bridge.py`) is a standalone TCP server. Start it before entering Play Mode in Unity.
+### Protocol
 
-```bash
-cd nemesis-boss-ai
-python llm_layer/state_bridge.py
-```
-
-**Protocol** — Unity sends JSON every 6 seconds:
+Unity sends JSON every 6 seconds:
 
 ```json
 { "boss_hp": 0.8, "phase": 0, "last_move": "attack", "player_hp": 0.9 }
 ```
 
-The bridge responds with a plain-text taunt (≤ 15 words). Post-generation guardrails strip modern slang and enforce a minimum length; if the output fails, one of five canned fallback taunts is returned.
+The bridge returns a plain-text taunt (≤ 15 words). Post-generation guardrails strip modern slang and enforce a minimum length; outputs that fail fall back to one of five canned Nemesis phrases.
 
-**Configuration** (`.env` in project root):
+### Testing the Bridge
 
+```bash
+python test_bridge.py
 ```
-GROQ_API_KEY=your_key_here
-```
+
+Sends three test states and prints the generated taunts. Useful for verifying the Groq API key and guardrails pipeline without opening Unity.
 
 ---
 
@@ -192,83 +251,59 @@ GROQ_API_KEY=your_key_here
 
 ```
 nemesis-boss-ai/
+├── .env.example                   Required env vars (copy to .env)
+├── requirements.txt               Python dependencies
 ├── config/
-│   ├── boss_ppo.yaml          PPO hyperparameters
-│   └── curriculum.yaml        Three-phase curriculum config
+│   ├── boss_ppo.yaml              ML-Agents PPO hyperparameters
+│   └── curriculum.yaml            Three-phase curriculum config
 ├── eval/
-│   ├── run_eval.py            RL vs FSM win-rate evaluation
-│   ├── results.csv            Latest evaluation output
-│   └── rllib_benchmark.csv    Distributed training benchmark
+│   ├── run_eval.py                RL vs FSM win-rate evaluation
+│   ├── results.csv                200-episode evaluation output
+│   └── rllib_benchmark.csv        Distributed training benchmark
 ├── llm_layer/
-│   ├── state_bridge.py        TCP server + Groq integration + guardrails
+│   ├── state_bridge.py            TCP server + Groq + guardrails
 │   └── guardrails/
-│       ├── config.yml         NeMo Guardrails config
-│       └── nemesis.co         Colang dialogue rules
+│       ├── config.yml             NeMo Guardrails config
+│       └── nemesis.co             Colang dialogue rules
 ├── results/
-│   ├── boss_curriculum01/     Early curriculum checkpoint
-│   ├── boss_final1/           Late-stage checkpoint
-│   └── boss_v3/               Production model (ONNX + PyTorch)
-├── Unity Project/
-│   └── Assets/
-│       ├── Models/BossAgent.onnx
-│       ├── Scenes/CombatScene.unity
-│       └── Scripts/
-│           ├── BossAgent.cs
-│           ├── PlayerController.cs
-│           ├── ScriptedBoss.cs
-│           ├── TauntDisplay.cs
-│           └── CombatLabel.cs
-├── train_rllib.py             Distributed PPO benchmark
-└── test_bridge.py             TCP client smoke test
+│   ├── boss_curriculum01/         Early checkpoint (18k steps, reward 5.53)
+│   ├── boss_final1/               Full run (300k steps, reward 16.66)
+│   └── boss_v3/                   Production model (300k steps, reward 14.93)
+│       ├── BossAgent.onnx         Deployed in Unity
+│       ├── BossAgent/
+│       │   └── BossAgent-300030.pt  PyTorch checkpoint (for retraining)
+│       ├── configuration.yaml     Training config snapshot
+│       └── run_logs/              Reward metrics and training status
+├── train_rllib.py                 Distributed PPO benchmark
+├── test_bridge.py                 TCP client smoke test
+└── Unity Project/
+    ├── Packages/
+    │   └── manifest.json          Unity package dependencies (auto-resolved)
+    ├── ProjectSettings/           Unity project configuration
+    └── Assets/
+        ├── Models/BossAgent.onnx  Runtime model (copy of boss_v3)
+        ├── Scenes/CombatScene.unity
+        └── Scripts/
+            ├── BossAgent.cs
+            ├── PlayerController.cs
+            ├── ScriptedBoss.cs
+            ├── TauntDisplay.cs
+            └── CombatLabel.cs
 ```
 
 ---
 
-## Dependencies
+## Unity Package Dependencies
 
-**Unity** (`Unity Project/Packages/manifest.json`):
+Managed via `Unity Project/Packages/manifest.json` — Unity resolves these automatically on first open.
 
 | Package | Version |
 |---------|---------|
-| Unity | 2022.3.62f3 |
 | com.unity.sentis | 1.2.0-exp.2 |
 | com.unity.render-pipelines.universal | 14.0.12 |
 | com.unity.textmeshpro | 3.0.7 |
-| com.unity.ml-agents | 2.3.0-exp.3 |
 
-**Python** (install into a virtualenv):
-
-```bash
-pip install groq nemoguardrails ray[rllib] torch onnxruntime gymnasium python-dotenv
-```
-
----
-
-## Quick Start
-
-1. **Clone and set up Python environment:**
-   ```bash
-   git clone <repo>
-   cd nemesis-boss-ai
-   python -m venv venv
-   # Windows
-   .\venv\Scripts\Activate.ps1
-   # macOS / Linux
-   source venv/bin/activate
-   pip install groq nemoguardrails python-dotenv
-   ```
-
-2. **Add your Groq API key:**
-   ```bash
-   echo GROQ_API_KEY=your_key_here > .env
-   ```
-
-3. **Start the taunt bridge:**
-   ```bash
-   python llm_layer/state_bridge.py
-   ```
-
-4. **Open the Unity project** (`Unity Project/`) in Unity 2022.3, open `Assets/Scenes/CombatScene.unity`, and press Play.
+> **Note:** ML-Agents (`com.unity.ml-agents 2.3.0-exp.3`) is used for training only and is not required to run the project. The trained policy is already exported to ONNX and loaded at runtime by Sentis.
 
 ---
 
