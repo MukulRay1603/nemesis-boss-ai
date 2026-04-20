@@ -1,64 +1,3 @@
-﻿//[OLD SCRIPT PHASE -1 ]
-//using UnityEngine;
-
-//public class PlayerController : MonoBehaviour
-//{
-//    private Rigidbody rb;
-
-//    [Header("Movement")]
-//    public float moveSpeed = 2f;
-//    public float arenaSize = 9f;
-
-//    private float directionTimer = 0f;
-//    private float directionInterval = 2f;
-//    private Vector3 moveDirection;
-
-//    void Start()
-//    {
-//        rb = GetComponent<Rigidbody>();
-//        if (rb == null)
-//            rb = gameObject.AddComponent<Rigidbody>();
-
-//        rb.freezeRotation = true;
-//        PickNewDirection();
-//    }
-
-//    void FixedUpdate()
-//    {
-//        directionTimer += Time.fixedDeltaTime;
-//        if (directionTimer >= directionInterval)
-//        {
-//            PickNewDirection();
-//            directionTimer = 0f;
-//        }
-
-//        // Move in current direction
-//        Vector3 newPos = transform.position + moveDirection * moveSpeed * Time.fixedDeltaTime;
-
-//        // Clamp to arena
-//        newPos.x = Mathf.Clamp(newPos.x, -arenaSize, arenaSize);
-//        newPos.z = Mathf.Clamp(newPos.z, -arenaSize, arenaSize);
-//        newPos.y = 1f;
-
-//        rb.MovePosition(newPos);
-//    }
-
-//    void PickNewDirection()
-//    {
-//        float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-//        moveDirection = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
-//    }
-
-//    // Called by BossAgent to reset position each episode
-//    public void ResetPlayer()
-//    {
-//        transform.position = new Vector3(0f, 1f, -6f);
-//        rb.velocity = Vector3.zero;
-//        rb.angularVelocity = Vector3.zero;
-//        PickNewDirection();
-//    }
-//}
-
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
@@ -94,6 +33,7 @@ public class PlayerController : MonoBehaviour
     private Rigidbody rb;
     private Transform boss;
     private BossAgent bossAgent;
+    private ScriptedBoss scriptedBoss;   // ← NEW: reference for FSM eval mode
 
     // ── Timers ─────────────────────────────────────────────────────────────
     private float attackTimer = 0f;
@@ -125,10 +65,11 @@ public class PlayerController : MonoBehaviour
         {
             boss = bossObj.transform;
             bossAgent = bossObj.GetComponent<BossAgent>();
+            scriptedBoss = bossObj.GetComponent<ScriptedBoss>();   // ← NEW
         }
     }
 
-    // Called by BossAgent.ResetEpisode()
+    // Called by BossAgent.ResetEpisode() and ScriptedBoss.ResetEpisode()
     public void ResetState()
     {
         playerHP = maxHP;
@@ -142,10 +83,49 @@ public class PlayerController : MonoBehaviour
         SetColor(IdleColor);
     }
 
+    // ── Helper: deal damage to whichever boss is active ───────────────────
+    private void DamageBoss(float dmg)
+    {
+        if (bossAgent != null && bossAgent.enabled)
+            bossAgent.TakeDamage(dmg);
+        else if (scriptedBoss != null && scriptedBoss.enabled)
+            scriptedBoss.TakeDamage(dmg);
+    }
+
+    // ── Helper: get current boss HP for logging ────────────────────────────
+    private float GetBossHP()
+    {
+        if (bossAgent != null && bossAgent.enabled) return bossAgent.bossHP;
+        if (scriptedBoss != null && scriptedBoss.enabled) return scriptedBoss.bossHP;
+        return 0f;
+    }
+
+    // ── Helper: is the RL boss in a vulnerable state? ──────────────────────
+    // FSM boss has no recovery window — always returns false in FSM mode,
+    // which means the player commits on cooldown instead (correct behavior).
+    private bool BossIsVulnerable()
+    {
+        if (bossAgent != null && bossAgent.enabled)
+            return bossAgent.currentBossState == BossAgent.BossState.Recovery;
+        return false;
+    }
+
+    // ── Helper: is the RL boss actively attacking? ─────────────────────────
+    // FSM boss attacks without telegraph — always returns false in FSM mode,
+    // so the player doesn't dodge phantom telegraphs.
+    private bool BossIsAttacking()
+    {
+        if (bossAgent != null && bossAgent.enabled)
+            return bossAgent.currentBossState == BossAgent.BossState.Attack ||
+                   bossAgent.currentBossState == BossAgent.BossState.Telegraph;
+        return false;
+    }
+
     // ──────────────────────────────────────────────────────────────────────
     void FixedUpdate()
     {
-        if (boss == null || bossAgent == null) return;
+        // ← FIXED: only bail if boss transform is missing entirely
+        if (boss == null) return;
 
         // Tick timers
         attackTimer -= Time.fixedDeltaTime;
@@ -158,12 +138,11 @@ public class PlayerController : MonoBehaviour
         Vector3 dirToBoss = (boss.position - transform.position).normalized;
         Vector3 perp = new Vector3(-dirToBoss.z, 0f, dirToBoss.x) * strafeSign;
 
-        // ── Boss state awareness ───────────────────────────────────────────
-        bool bossIsVulnerable = bossAgent.currentBossState == BossAgent.BossState.Recovery;
-        bool bossIsAttacking = bossAgent.currentBossState == BossAgent.BossState.Attack ||
-                                bossAgent.currentBossState == BossAgent.BossState.Telegraph;
+        // ── Boss state awareness (safe in both RL and FSM mode) ────────────
+        bool bossIsVulnerable = BossIsVulnerable();
+        bool bossIsAttacking = BossIsAttacking();
 
-        // ── Emergency: dodge if boss attacks and is very close ─────────────
+        // ── Emergency: dodge if RL boss attacks and is very close ──────────
         if (bossIsAttacking && dist < 3.0f && dodgeTimer <= 0f &&
             state != PlayerState.Dodge)
         {
@@ -193,29 +172,31 @@ public class PlayerController : MonoBehaviour
             case PlayerState.KeepDistance:
                 if (dist < safeDistance - 0.5f)
                 {
-                    // Too close — back off
                     rb.MovePosition(transform.position -
                         dirToBoss * moveSpeed * Time.fixedDeltaTime);
                 }
                 else if (dist > safeDistance + 1.5f)
                 {
-                    // Too far — close in
                     rb.MovePosition(transform.position +
                         dirToBoss * moveSpeed * 0.7f * Time.fixedDeltaTime);
                 }
                 else
                 {
-                    // Good range — start strafing
                     strafeSign = Random.value > 0.5f ? 1f : -1f;
                     strafeTimer = Random.Range(0.6f, 1.4f);
                     state = PlayerState.Strafe;
                 }
 
-                // Seize vulnerability window immediately
-                if (bossIsVulnerable && dist < safeDistance + 1f &&
-                    attackTimer <= 0f)
+                // Seize vulnerability window (RL only) or commit on cooldown (FSM)
+                if (bossIsVulnerable && dist < safeDistance + 1f && attackTimer <= 0f)
                 {
                     state = PlayerState.Commit;
+                }
+                // In FSM mode, commit whenever cooldown is ready and in range
+                else if (!bossIsVulnerable && bossAgent == null || (bossAgent != null && !bossAgent.enabled))
+                {
+                    if (attackTimer <= 0f && dist <= safeDistance + 1f)
+                        state = PlayerState.Commit;
                 }
                 break;
 
@@ -223,11 +204,9 @@ public class PlayerController : MonoBehaviour
             case PlayerState.Strafe:
                 strafeTimer -= Time.fixedDeltaTime;
 
-                // Circle
                 rb.MovePosition(transform.position +
                     perp * moveSpeed * 0.9f * Time.fixedDeltaTime);
 
-                // Maintain safe distance
                 if (dist < safeDistance - 1f)
                     rb.MovePosition(transform.position -
                         dirToBoss * moveSpeed * 0.5f * Time.fixedDeltaTime);
@@ -235,7 +214,6 @@ public class PlayerController : MonoBehaviour
                     rb.MovePosition(transform.position +
                         dirToBoss * moveSpeed * 0.5f * Time.fixedDeltaTime);
 
-                // Jump on recovery window
                 if (bossIsVulnerable && attackTimer <= 0f)
                 {
                     state = PlayerState.Commit;
@@ -244,12 +222,14 @@ public class PlayerController : MonoBehaviour
 
                 if (strafeTimer <= 0f)
                 {
-                    strafeSign = -strafeSign; // reverse direction
+                    strafeSign = -strafeSign;
                     strafeTimer = Random.Range(0.5f, 1.2f);
                     state = PlayerState.KeepDistance;
                 }
 
-                // Run from incoming attack
+                if (attackTimer <= 0f && dist <= attackRange + 1.0f)
+                    state = PlayerState.Commit;
+
                 if (bossIsAttacking && dist < 3.5f)
                 {
                     retreatDir = (-dirToBoss).normalized;
@@ -258,19 +238,18 @@ public class PlayerController : MonoBehaviour
                 }
                 break;
 
-            // ── Commit: dart into attack range during boss recovery ─────────
+            // ── Commit: dart into attack range ────────────────────────────
             case PlayerState.Commit:
                 rb.MovePosition(transform.position +
                     dirToBoss * moveSpeed * 2.2f * Time.fixedDeltaTime);
 
                 if (dist <= attackRange && attackTimer <= 0f)
                 {
-                    bossAgent.TakeDamage(attackDamage);
+                    DamageBoss(attackDamage);   // ← FIXED: works in both modes
                     attackTimer = attackCooldown;
                     SetColor(AttackColor); colorTimer = 0.3f;
-                    Debug.Log($"[Player] Hit boss | BossHP={bossAgent.bossHP:F1}");
+                    Debug.Log($"[Player] Hit boss | BossHP={GetBossHP():F1}");
 
-                    // Retreat after successful hit
                     retreatDir = (-dirToBoss +
                         new Vector3(Random.Range(-0.3f, 0.3f), 0f,
                                     Random.Range(-0.3f, 0.3f))).normalized;
@@ -280,8 +259,9 @@ public class PlayerController : MonoBehaviour
                 }
                 else if (!bossIsVulnerable && dist > attackRange)
                 {
-                    // Boss recovered before we landed — abort
-                    state = PlayerState.KeepDistance;
+                    // In RL mode: abort if boss recovered. In FSM mode: always commit through.
+                    if (bossAgent != null && bossAgent.enabled)
+                        state = PlayerState.KeepDistance;
                 }
                 break;
 
@@ -294,7 +274,6 @@ public class PlayerController : MonoBehaviour
                 if (retreatTimer <= 0f)
                     state = PlayerState.KeepDistance;
 
-                // If boss chases into us while retreating, dodge
                 if (dist < 1.8f && dodgeTimer <= 0f)
                 {
                     dodgeDir = (perp - dirToBoss * 0.3f).normalized;
@@ -310,17 +289,15 @@ public class PlayerController : MonoBehaviour
                 rb.MovePosition(transform.position +
                     dodgeDir * retreatSpeed * 2f * Time.fixedDeltaTime);
 
-                if (dodgeTimer < 2.0f - 0.4f) // short burst
+                if (dodgeTimer < 2.0f - 0.4f)
                     state = PlayerState.KeepDistance;
                 break;
         }
 
     ClampAndFace:
-        // Face boss
         if (dirToBoss != Vector3.zero)
             transform.rotation = Quaternion.LookRotation(dirToBoss);
 
-        // Arena clamp
         Vector3 p = transform.position;
         p.x = Mathf.Clamp(p.x, -arenaLimit, arenaLimit);
         p.z = Mathf.Clamp(p.z, -arenaLimit, arenaLimit);

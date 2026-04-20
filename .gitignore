@@ -1,11 +1,9 @@
 # ============================================================
 # Nemesis Boss AI — .gitignore
-# Repo root: D:\Projects\Nemesis\nemesis-boss-ai\
 # ============================================================
 
 # ------------------------------------------------------------
-# Unity Project subfolder (Unity Project/ with space)
-# Generated folders — NEVER commit these
+# Unity — generated folders, never commit
 # ------------------------------------------------------------
 Unity Project/Library/
 Unity Project/Temp/
@@ -15,80 +13,52 @@ Unity Project/Builds/
 Unity Project/Logs/
 Unity Project/UserSettings/
 Unity Project/.vs/
-Unity Project/*.sln
-Unity Project/*.csproj
-Unity Project/*.unityproj
-Unity Project/*.suo
-Unity Project/*.tmp
-Unity Project/*.user
-Unity Project/*.userprefs
-Unity Project/*.pidb
-Unity Project/*.booproj
-Unity Project/*.svd
-Unity Project/*.pdb
-Unity Project/*.mdb
-Unity Project/*.opendb
-Unity Project/*.VC.db
-Unity Project/*.pidb.meta
-Unity Project/*.pdb.meta
-Unity Project/*.mdb.meta
 Unity Project/sysinfo.txt
 Unity Project/mono_crash.*
+
+# Unity file types
+Unity Project/*.sln
+Unity Project/*.csproj
+Unity Project/*.suo
+Unity Project/*.user
+Unity Project/*.log
 Unity Project/*.apk
 Unity Project/*.aab
 Unity Project/*.unitypackage
 Unity Project/*.unitypackage.meta
-Unity Project/*.app
-Unity Project/crashlytics-build.properties
-Unity Project/ExportedObj/
-Unity Project/.consulo/
-Unity Project/.gradle/
-Unity Project/.utmp/
-Unity Project/*.blend1
-Unity Project/*.blend1.meta
-Unity Project/*.log
+
+# TextMesh Pro package examples (imported via Package Manager, not project code)
+Unity Project/Assets/TextMesh Pro/
+Unity Project/Assets/TextMesh Pro.meta
 
 # ------------------------------------------------------------
-# Python side
+# Python
 # ------------------------------------------------------------
-nemesis-env/
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+nemesis-env/
+rllib-env/
+venv/
+.venv/
+
+# ------------------------------------------------------------
+# Secrets — never commit
+# ------------------------------------------------------------
 .env
+*.env
 
 # ------------------------------------------------------------
-# Old training runs — only boss_v3 is the production model
+# MLflow local experiment store
 # ------------------------------------------------------------
-results/boss_final/
-results/boss_final1/
-results/boss_overnight/
-results/boss_overnight2/
-results/boss_overnight3/
-results/boss_run01/
-results/boss_run02/
-results/boss_run03/
-results/boss_run04/
-results/boss_run05/
-results/test01/
-results/test02/
-results/test03/
-
-# Keep boss_v3 ONNX (production model) — do NOT ignore results/boss_v3/
+mlruns/
+mlartifacts/
 
 # ------------------------------------------------------------
-# OS / editor junk
+# OS / editor
 # ------------------------------------------------------------
 .DS_Store
 Thumbs.db
 *.log
-
-# RLlib venv
-rllib-env/
-
-# MLflow local runs
-mlruns/
-mlartifacts/
-
-# Eval outputs (committed individually, not the whole folder auto-tracked)
-*.csv.bak
+.vscode/
