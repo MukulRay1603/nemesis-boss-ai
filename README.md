@@ -218,10 +218,10 @@ Results are written to `eval/results.csv`. The RLlib distributed training benchm
 
 | Workers | Wall time (s) | Speedup |
 |---------|--------------|---------|
-| 1 | 145.2 | 1.00× |
-| 2 | 95.1 | 1.53× |
-| 4 | 58.5 | 2.49× |
-| 8 | 55.7 | 2.61× |
+| 1 | 77.2 | 1.00× |
+| 2 | 50.8 | 1.52× |
+| 4 | 35.5 | 2.17× |
+| 8 | 29.5 | 2.62× |
 
 ---
 
