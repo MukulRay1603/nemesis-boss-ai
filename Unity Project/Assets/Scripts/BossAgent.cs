@@ -66,6 +66,43 @@ public class BossAgent : MonoBehaviour
 
     private System.Diagnostics.Stopwatch m_SW = new System.Diagnostics.Stopwatch();
 
+    // Set by EvalRunner before Start(). Null = use GPUCompute, or CPU when there is no GPU device.
+    public static BackendType? BackendOverride = null;
+    public BackendType ActiveBackend { get; private set; }
+
+    // Set by EvalRunner: seeds the model's Multinomial sampling so runs can be repeated.
+    // Null = Sentis default (unseeded System.Random), which is what normal play uses.
+    public static int? PolicySeed = null;
+
+    // Set by BossDebugOverlay: also read the policy's softmax so the overlay can show it.
+    public static bool CaptureProbs = false;
+
+    // Set by EvalRunner for ablations: keep the same boss body (FSM, timings, phases) but replace
+    // the policy's choice. "random" = uniform over unmasked actions, "attack" = always action 1.
+    // The network still runs every decision so timings stay comparable.
+    public static string PolicyOverride = null;
+    private System.Random m_AblationRng;
+    public float[] LastProbs { get; } = new float[4];
+    public float[] LastMask { get; } = { 1f, 1f, 1f, 1f };
+    public int Decisions { get; private set; }
+    public double LastInferenceMs { get; private set; }
+    private string m_ProbsOutput;
+
+    // Wall-clock time of every policy call (tensor build + Execute + readback), in milliseconds.
+    public static readonly System.Collections.Generic.List<double> InferenceMs =
+        new System.Collections.Generic.List<double>(100000);
+
+    // Per-episode counters for evaluation
+    private int m_Swings = 0;
+    private int m_Hits = 0;
+    private int[] m_ActionCounts = new int[4];
+
+    // Read-only view for the debug overlay
+    public int LastAction => lastAction;
+    public float Stamina => bossStamina;
+    public float StateTimeLeft => stateTimer;
+    public float EpisodeTime => episodeTime;
+
     private int m_Count = 0;
 
     // ──────────────────────────────────────────────────────────────────────
@@ -84,9 +121,24 @@ public class BossAgent : MonoBehaviour
         if (modelAsset == null) { Debug.LogError("[Boss] No ModelAsset!"); return; }
 
         m_RuntimeModel = ModelLoader.Load(modelAsset);
-        m_Worker = WorkerFactory.CreateWorker(BackendType.GPUCompute, m_RuntimeModel);
+        foreach (var layer in m_RuntimeModel.layers)
+        {
+            if (PolicySeed.HasValue && layer is Unity.Sentis.Layers.RandomLayer rnd)
+            {
+                rnd.hasSeed = true;
+                rnd.seed = PolicySeed.Value;
+                rnd.ResetSeed();
+            }
+            if (CaptureProbs && layer is Unity.Sentis.Layers.Softmax)
+                m_ProbsOutput = layer.name;
+        }
+        if (m_ProbsOutput != null) m_RuntimeModel.AddOutput(m_ProbsOutput);
+        ActiveBackend = BackendOverride ??
+            (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null
+                ? BackendType.CPU : BackendType.GPUCompute);
+        m_Worker = WorkerFactory.CreateWorker(ActiveBackend, m_RuntimeModel);
         m_Ready = true;
-        Debug.Log("[Boss] Sentis loaded. Ready.");
+        Debug.Log($"[Boss] Sentis loaded on {ActiveBackend}. Ready.");
 
         ResetEpisode();
     }
@@ -117,6 +169,9 @@ public class BossAgent : MonoBehaviour
         isPulsing = false;
         phaseSpeedMult = 1f;
         recoveryDuration = 0.85f;   // reset to base in case phase 2 shortened it
+        m_Swings = 0;
+        m_Hits = 0;
+        m_ActionCounts = new int[4];
 
         SetBossState(BossState.Idle);
 
@@ -145,6 +200,12 @@ public class BossAgent : MonoBehaviour
         {
             string outcome = bossWins ? "BOSS_WIN" : plWins ? "PLAYER_WIN" : "TIMEOUT";
             Debug.Log($"RESULT|RL|{outcome}|{episodeTime:F1}|{bossHP:F1}|{pHP:F1}|{currentPhase}");
+            EpisodeStats.Report(new EpisodeResult
+            {
+                boss = "RL", outcome = outcome, duration = episodeTime,
+                bossHP = bossHP, playerHP = pHP, finalPhase = currentPhase,
+                bossSwings = m_Swings, bossHits = m_Hits, actionCounts = m_ActionCounts,
+            });
             ResetEpisode();
         }
     }
@@ -202,12 +263,14 @@ public class BossAgent : MonoBehaviour
                     {
                         bossStamina -= 20f;
                         playerController?.TakeDamage(dmg);
+                        m_Hits++;
                         Debug.Log($"[Boss] SPECIAL hit | " +
                                   $"pHP={(playerController?.playerHP ?? 0f):F1}");
                     }
                     else if (pendingAction == 1)
                     {
                         playerController?.TakeDamage(dmg);
+                        m_Hits++;
                         Debug.Log($"[Boss] Hit | " +
                                   $"pHP={(playerController?.playerHP ?? 0f):F1}");
                     }
@@ -255,6 +318,7 @@ public class BossAgent : MonoBehaviour
                 break;
             case BossState.Telegraph:
                 stateTimer = telegraphDuration;
+                m_Swings++;
                 break;
             case BossState.Attack:
                 stateTimer = attackDuration;
@@ -272,6 +336,7 @@ public class BossAgent : MonoBehaviour
     // ── Policy query ───────────────────────────────────────────────────────
     int QueryPolicy()
     {
+        m_SW.Restart();
         float[] obs = BuildObservations();
         float[] masks = { 1f, 1f, 1f, 1f };
         if (currentPhase < 2 && bossStamina < 20f) masks[3] = 0f;
@@ -287,8 +352,27 @@ public class BossAgent : MonoBehaviour
         int action = 1;
         if (output != null) { output.MakeReadable(); action = output[0]; }
 
+        if (PolicyOverride == "attack") action = 1;
+        else if (PolicyOverride == "random")
+        {
+            m_AblationRng ??= new System.Random(PolicySeed ?? 0);
+            do { action = m_AblationRng.Next(4); } while (masks[action] < 0.5f);
+        }
+
+        if (m_ProbsOutput != null && m_Worker.PeekOutput(m_ProbsOutput) is TensorFloat probs)
+        {
+            probs.MakeReadable();
+            for (int i = 0; i < 4; i++) LastProbs[i] = probs[0, i];
+        }
+        for (int i = 0; i < 4; i++) LastMask[i] = masks[i];
+        Decisions++;
+
         obsTensor.Dispose();
         maskTensor.Dispose();
+        m_SW.Stop();
+        LastInferenceMs = m_SW.Elapsed.TotalMilliseconds;
+        InferenceMs.Add(LastInferenceMs);
+        if (action >= 0 && action < 4) m_ActionCounts[action]++;
 
         m_Count++;
         if (m_Count % 50 == 0)

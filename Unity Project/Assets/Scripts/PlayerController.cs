@@ -48,7 +48,7 @@ public class PlayerController : MonoBehaviour
     // ── Visual ─────────────────────────────────────────────────────────────
     private Renderer rend;
     private Material mat;
-    private static readonly Color IdleColor = Color.white;
+    private static readonly Color IdleColor = new Color(0.45f, 0.65f, 1f);   // blue, so the player never looks like the white phase-1 boss
     private static readonly Color AttackColor = new Color(0.3f, 0.8f, 1f);
     private static readonly Color RetreatColor = new Color(1f, 0.85f, 0.1f);
     private static readonly Color DodgeColor = new Color(0.4f, 1f, 0.4f);

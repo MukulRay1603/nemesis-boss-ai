@@ -142,3 +142,7 @@ service-account*.json
 # Jupyter
 # ------------------------------------------------------------
 .ipynb_checkpoints/
+
+# Recorded gameplay video (large binaries, kept local)
+media/*
+!media/README.md

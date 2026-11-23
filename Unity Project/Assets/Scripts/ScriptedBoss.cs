@@ -38,6 +38,8 @@ public class ScriptedBoss : MonoBehaviour
     private static readonly Color Phase2Color = new Color(0.6f, 0f, 0f);
     private int previousPhase = 0;
 
+    private int hits = 0;
+
     private Rigidbody        rb;
     private PlayerController playerController;
 
@@ -73,6 +75,7 @@ public class ScriptedBoss : MonoBehaviour
         attackTimer   = 0f;
         currentPhase  = 0;
         previousPhase = 0;
+        hits          = 0;
 
         if (rb != null) { rb.velocity = rb.angularVelocity = Vector3.zero; }
         ApplyColor(Phase0Color);
@@ -117,6 +120,7 @@ public class ScriptedBoss : MonoBehaviour
             if (attackTimer <= 0f)
             {
                 playerController?.TakeDamage(attackDamage);
+                hits++;
                 attackTimer = attackCooldown;
                 float pHP = playerController != null ? playerController.playerHP : 0f;
                 Debug.Log($"[FSM] Hit player | pHP={pHP:F1}");
@@ -148,6 +152,12 @@ public class ScriptedBoss : MonoBehaviour
             // Same pipe-delimited format as BossAgent for easy parsing
             Debug.Log($"RESULT|FSM|{outcome}|{episodeTime:F1}|" +
                       $"{bossHP:F1}|{playerHP:F1}|{currentPhase}");
+            EpisodeStats.Report(new EpisodeResult
+            {
+                boss = "FSM", outcome = outcome, duration = episodeTime,
+                bossHP = bossHP, playerHP = playerHP, finalPhase = currentPhase,
+                bossSwings = hits, bossHits = hits, actionCounts = null,
+            });
             ResetEpisode();
         }
     }
