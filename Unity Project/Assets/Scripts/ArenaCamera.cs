@@ -99,14 +99,16 @@ public class ArenaCamera : MonoBehaviour
         Vector3 right = Vector3.Cross(Vector3.up, fwd);
         Vector3 pivot = player.position + Vector3.up * 0.9f;
 
-        // Pull back a little when the boss is far so both stay on screen.
-        float dist = distance + Mathf.Clamp(toBoss.magnitude - 4f, 0f, 8f) * 0.25f;
-        pos = pivot - fwd * dist + Vector3.up * height + right * shoulder;
+        // Pull back a little when the boss is far so both stay on screen. When you are playing,
+        // sit higher and further back so your own character stays fully in frame.
+        bool human = GameFlow.HumanMode;
+        float dist = (human ? distance + 1.2f : distance) + Mathf.Clamp(toBoss.magnitude - 4f, 0f, 8f) * 0.25f;
+        pos = pivot - fwd * dist + Vector3.up * (human ? height + 1.0f : height) + right * shoulder;
 
         // Stay inside the arena walls (inner face at +-9.5) so they never block the view.
         pos.x = Mathf.Clamp(pos.x, -9.2f, 9.2f);
         pos.z = Mathf.Clamp(pos.z, -9.2f, 9.2f);
-        look = Vector3.Lerp(pivot, boss.position + Vector3.up * 0.6f, lookBias);
+        look = Vector3.Lerp(pivot, boss.position + Vector3.up * 0.6f, human ? lookBias - 0.1f : lookBias);
     }
 
     GameObject playerLabel;
@@ -125,7 +127,9 @@ public class ArenaCamera : MonoBehaviour
         transform.position = Vector3.SmoothDamp(transform.position, target, ref vel, positionSmooth, Mathf.Infinity, dt);
         lookPoint = Vector3.Lerp(lookPoint, look, 1f - Mathf.Exp(-10f * dt));
         transform.rotation = Quaternion.LookRotation(lookPoint - transform.position);
-        cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, CurrentMode == Mode.Broadcast ? 50f : 58f, 1f - Mathf.Exp(-6f * dt));
+        // Narrower-than-16:9 screens get a wider field of view so the sides of the arena stay visible.
+        float widen = Mathf.Clamp((1.78f - cam.aspect) * 18f, 0f, 14f);
+        cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, (CurrentMode == Mode.Broadcast ? 50f : 58f) + widen, 1f - Mathf.Exp(-6f * dt));
 
         // Trauma-based shake: offset and roll from Perlin noise, scaled by trauma squared.
         shakeT += dt * 22f;

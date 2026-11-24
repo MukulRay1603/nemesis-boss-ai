@@ -97,8 +97,24 @@ public class GameFlow : MonoBehaviour
         cb.fadeDuration = 0.12f;
         btn.colors = cb;
         btn.onClick.AddListener(onClick);
+        b.parent.gameObject.AddComponent<HoverLift>();
         UiKit.Label(b, title, 26, new Vector2(0, -18), new Vector2(220, 32), TextAlignmentOptions.Center, 14f);
         UiKit.Label(b, sub, 13, new Vector2(0, -56), new Vector2(220, 20), TextAlignmentOptions.Center, 1f, UiKit.Muted);
+    }
+
+    /// Small, eased scale-up on hover or touch, so the start buttons feel responsive.
+    class HoverLift : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler, IPointerUpHandler
+    {
+        float target = 1f, current = 1f;
+        public void OnPointerEnter(PointerEventData e) => target = 1.04f;
+        public void OnPointerExit(PointerEventData e) => target = 1f;
+        public void OnPointerDown(PointerEventData e) => target = 0.98f;
+        public void OnPointerUp(PointerEventData e) => target = 1.04f;
+        void Update()
+        {
+            current = Mathf.Lerp(current, target, 1f - Mathf.Exp(-14f * Time.unscaledDeltaTime));
+            transform.localScale = Vector3.one * current;
+        }
     }
 
     void Choose(bool human)

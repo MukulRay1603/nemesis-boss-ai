@@ -55,6 +55,16 @@ public class BossDebugOverlay : MonoBehaviour
     const float MixW = 92f;
     readonly int[,] phaseMix = new int[3, 4];
 
+    // Compact layout (phones/tablets): fewer details, smaller card.
+    bool compact;
+    readonly System.Collections.Generic.List<GameObject> detail = new System.Collections.Generic.List<GameObject>();
+    readonly System.Collections.Generic.List<RectTransform> lowerBlock = new System.Collections.Generic.List<RectTransform>();
+    RectTransform cardRoot;
+
+    // opponent profile row (models with 18 inputs only)
+    GameObject profileRow;
+    readonly UiKit.Bar[] profileBars = new UiKit.Bar[4];
+
     // controls card (play mode)
     CanvasGroup controls;
 
@@ -123,15 +133,18 @@ public class BossDebugOverlay : MonoBehaviour
     // ── Layout ────────────────────────────────────────────────────────────
     void Build()
     {
+        compact = TouchControls.Active || Application.isMobilePlatform;
         var canvas = UiKit.MakeCanvas(transform, "HudCanvas", 50);
         root = canvas.gameObject;
         var rt = (RectTransform)root.transform;
 
         // ── Versus card, top centre
         var top = UiKit.Card(rt, "Versus", new Vector2(0.5f, 1f), new Vector2(0, -26), new Vector2(TopW, 112));
+        // Phones: scale the versus card down so the top-right MENU button has its own space.
+        if (compact) top.parent.localScale = Vector3.one * 0.86f;
         float lx = 32f, rx = TopW - 32f - BarW;
         UiKit.Label(top, "NEMESIS", 24, new Vector2(lx, -16), new Vector2(BarW, 30), TextAlignmentOptions.Left, 12f);
-        UiKit.Label(top, "BOSS · PPO POLICY", 11, new Vector2(lx, -22), new Vector2(BarW, 20), TextAlignmentOptions.Right, 6f, UiKit.Faint);
+        detail.Add(UiKit.Label(top, "BOSS · PPO POLICY", 11, new Vector2(lx, -22), new Vector2(BarW, 20), TextAlignmentOptions.Right, 6f, UiKit.Faint).gameObject);
         UiKit.Pill(top, new Vector2(lx, -54), new Vector2(BarW, BarH), UiKit.Track, "Track");
         bossChip = UiKit.Pill(top, new Vector2(lx, -54), new Vector2(BarW, BarH), new Color(1f, 0.9f, 0.75f, 0.5f), "Chip").rectTransform;
         bossFillImg = UiKit.Pill(top, new Vector2(lx, -54), new Vector2(BarW, BarH), UiKit.Phase[0], "Fill");
@@ -165,7 +178,7 @@ public class BossDebugOverlay : MonoBehaviour
         }
         float px = 24f;
         UiKit.Label(card, "BOSS AI", 12, new Vector2(px, -20), new Vector2(Inner, 18), TextAlignmentOptions.Left, 10f, UiKit.Muted);
-        UiKit.Label(card, "PPO  ·  ONNX  ·  Sentis", 11, new Vector2(px, -20), new Vector2(Inner, 18), TextAlignmentOptions.Right, 2f, UiKit.Faint);
+        detail.Add(UiKit.Label(card, "PPO  ·  ONNX  ·  Sentis", 11, new Vector2(px, -20), new Vector2(Inner, 18), TextAlignmentOptions.Right, 2f, UiKit.Faint).gameObject);
         stateDot = UiKit.Pill(card, new Vector2(px, -52), new Vector2(10, 10), Color.white, "Dot");
         stateLabel = UiKit.Label(card, "", 16, new Vector2(px + 18, -45), new Vector2(240, 24), TextAlignmentOptions.Left, 6f);
         stateTime = UiKit.Label(card, "", 13, new Vector2(px, -47), new Vector2(Inner, 20), TextAlignmentOptions.Right, 1f, UiKit.Faint);
@@ -181,23 +194,27 @@ public class BossDebugOverlay : MonoBehaviour
             float x = px + i * 138f;
             chipDot[i] = UiKit.Pill(card, new Vector2(x, -183), new Vector2(8, 8), Color.white, "ChipDot");
             chipText[i] = UiKit.Label(card, "", 14, new Vector2(x + 14, -176), new Vector2(120, 22), TextAlignmentOptions.Left, 1f, UiKit.Muted);
+            detail.Add(chipDot[i].gameObject); detail.Add(chipText[i].gameObject);
         }
 
-        UiKit.Pill(card, new Vector2(px, -212), new Vector2(Inner, 1f), UiKit.Track, "Divider");
-        UiKit.Label(card, "LAST 30 SECONDS", 11, new Vector2(px, -226), new Vector2(Inner, 16), TextAlignmentOptions.Left, 8f, UiKit.Faint);
+        lowerBlock.Add(UiKit.Pill(card, new Vector2(px, -212), new Vector2(Inner, 1f), UiKit.Track, "Divider").rectTransform);
+        lowerBlock.Add(UiKit.Label(card, "LAST 30 SECONDS", 11, new Vector2(px, -226), new Vector2(Inner, 16), TextAlignmentOptions.Left, 8f, UiKit.Faint).rectTransform);
         footnote = UiKit.Label(card, "", 11, new Vector2(px, -226), new Vector2(Inner, 16), TextAlignmentOptions.Right, 1f, UiKit.Faint);
+        detail.Add(footnote.gameObject);
         var tl = UiKit.Pill(card, new Vector2(px, -258), new Vector2(Inner, 28f), new Color(1, 1, 1, 0.06f), "Timeline");
         timeline = tl.rectTransform;
-        UiKit.Label(card, "now", 10, new Vector2(px, -288), new Vector2(Inner, 14), TextAlignmentOptions.Right, 2f, UiKit.Faint);
-        UiKit.Label(card, "-30 s", 10, new Vector2(px, -288), new Vector2(Inner, 14), TextAlignmentOptions.Left, 2f, UiKit.Faint);
+        lowerBlock.Add(timeline);
+        detail.Add(UiKit.Label(card, "now", 10, new Vector2(px, -288), new Vector2(Inner, 14), TextAlignmentOptions.Right, 2f, UiKit.Faint).gameObject);
+        detail.Add(UiKit.Label(card, "-30 s", 10, new Vector2(px, -288), new Vector2(Inner, 14), TextAlignmentOptions.Left, 2f, UiKit.Faint).gameObject);
 
         // per-phase mix, one compact row
-        UiKit.Label(card, "MIX", 11, new Vector2(px, -312), new Vector2(40, 16), TextAlignmentOptions.Left, 6f, UiKit.Faint);
+        detail.Add(UiKit.Label(card, "MIX", 11, new Vector2(px, -312), new Vector2(40, 16), TextAlignmentOptions.Left, 6f, UiKit.Faint).gameObject);
         for (int ph = 0; ph < 3; ph++)
         {
             float x = px + 48f + ph * 122f;
-            UiKit.Label(card, PhaseRoman[ph], 11, new Vector2(x, -312), new Vector2(24, 16), TextAlignmentOptions.Right, 1f, UiKit.Muted);
+            detail.Add(UiKit.Label(card, PhaseRoman[ph], 11, new Vector2(x, -312), new Vector2(24, 16), TextAlignmentOptions.Right, 1f, UiKit.Muted).gameObject);
             var track = UiKit.Pill(card, new Vector2(x + 30, -317), new Vector2(MixW, 6f), UiKit.Track, "MixTrack");
+            detail.Add(track.gameObject);
             track.gameObject.AddComponent<Mask>().showMaskGraphic = true;
             for (int a = 0; a < 4; a++)
             {
@@ -211,6 +228,31 @@ public class BossDebugOverlay : MonoBehaviour
                 img.raycastTarget = false;
                 mixSeg[ph, a] = srt;
             }
+        }
+
+        // Opponent profile: what an 18-input (adaptive) model reads about whoever it is fighting.
+        profileRow = new GameObject("Profile", typeof(RectTransform));
+        profileRow.transform.SetParent(card, false);
+        var prt = (RectTransform)profileRow.transform;
+        prt.anchorMin = prt.anchorMax = prt.pivot = new Vector2(0, 1);
+        prt.anchoredPosition = Vector2.zero;
+        prt.sizeDelta = new Vector2(CardW, 60);
+        UiKit.Label(prt, "HOW IT READS YOU", 11, new Vector2(px, -344), new Vector2(Inner, 16), TextAlignmentOptions.Left, 8f, UiKit.Faint);
+        string[] pn = { "Aggression", "Evasion", "Range", "Pressure" };
+        for (int i = 0; i < 4; i++)
+        {
+            float x = px + i * 104f;
+            UiKit.Label(prt, pn[i], 11, new Vector2(x, -364), new Vector2(96, 16), TextAlignmentOptions.Left, 1f, UiKit.Muted);
+            profileBars[i] = new UiKit.Bar(prt, new Vector2(x, -384), 92f, 4f, new Color(1f, 0.82f, 0.5f));
+        }
+        profileRow.SetActive(false);
+
+        cardRoot = (RectTransform)card.parent;
+        if (compact)
+        {
+            foreach (var go in detail) go.SetActive(false);
+            foreach (var r in lowerBlock) r.anchoredPosition += new Vector2(0, 40f);   // close the gap left by the chips
+            cardRoot.sizeDelta = new Vector2(CardW, 256);
         }
 
         // ── Controls card, bottom left (play mode only)
@@ -404,6 +446,21 @@ public class BossDebugOverlay : MonoBehaviour
         }
 
         controls.alpha = Mathf.Lerp(controls.alpha, Human && !TouchControls.Active ? 1f : 0f, 1f - Mathf.Exp(-6f * dt));
+
+        bool showProfile = boss.UsesProfile && !compact;
+        if (profileRow.activeSelf != showProfile)
+        {
+            profileRow.SetActive(showProfile);
+            cardRoot.sizeDelta = new Vector2(CardW, showProfile ? 404 : 352);
+        }
+        if (showProfile)
+        {
+            var pr = boss.Profile;
+            profileBars[0].Set(pr.Aggression, 6f);
+            profileBars[1].Set(pr.Evasion, 6f);
+            profileBars[2].Set(pr.Range, 6f);
+            profileBars[3].Set(pr.Pressure, 6f);
+        }
 
         titleT += dt;
         float alpha = titleT < 0.35f ? titleT / 0.35f : titleT < 1.9f ? 1f : Mathf.Clamp01(1f - (titleT - 1.9f) / 0.6f);

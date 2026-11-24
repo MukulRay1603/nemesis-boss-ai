@@ -54,6 +54,7 @@ public class SettingsMenu : MonoBehaviour
 
     void Start()
     {
+        showFps = !TouchControls.Active;   // keep the phone screen clean; still available in the menu
         if (FindObjectOfType<EventSystem>() == null)
             new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
 

@@ -75,6 +75,19 @@
     body.mobile #stage { padding: 0; }
     body.mobile #frame { width: min(100vw, calc(100dvh * 16 / 9)); border-radius: 0; box-shadow: none; }
     body.mobile #toolbar { padding-top: 10px; }
+    /* Phones: keep the page short and tidy. Keyboard keys and the long explainer are desktop only. */
+    body.mobile .desktop-only { display: none; }
+    body.mobile main { padding: 8px 16px 48px; }
+    body.mobile section { margin-top: 36px; }
+    body.mobile .lead { font-size: 16px; }
+    body.mobile .card { padding: 16px; }
+    body.mobile .card p { font-size: 14px; margin-bottom: 6px; }
+    body.mobile .four { grid-template-columns: 1fr 1fr; gap: 10px; }
+    body.mobile .step h3 { font-size: 16px; }
+    body.mobile table { font-size: 13px; }
+    body.mobile th, body.mobile td { padding: 8px 6px; }
+    .mobile-only { display: none; }
+    body.mobile .mobile-only { display: block; }
     @media (max-width: 640px) { nav a { margin-left: 14px; font-size: 13px; } header { padding: 0 14px; } main { padding: 16px; } }
   </style>
 </head>
@@ -109,13 +122,13 @@
         <div class="card">
           <h3>Watch</h3>
           <p>The AI boss fights a scripted hunter bot. This is the setup used for every measured result below, so what you see is what was evaluated.</p>
-          <div class="keys"><span class="key">ESC</span><span class="key">settings</span><span class="key">TAB</span><span class="key">AI card</span><span class="key">C</span><span class="key">camera</span></div>
+          <div class="keys desktop-only"><span class="key">ESC</span><span class="key">settings</span><span class="key">TAB</span><span class="key">AI card</span><span class="key">C</span><span class="key">camera</span></div>
         </div>
         <div class="card">
           <h3>Fight</h3>
           <p>You control the hunter. Read the boss's wind-up, dash out of range, and punish it while it recovers.</p>
-          <div class="keys"><span class="key">WASD</span><span class="key">move</span><span class="key">SPACE / CLICK</span><span class="key">attack</span><span class="key">SHIFT</span><span class="key">dash</span></div>
-          <p class="note">On a phone or tablet: joystick on the left, Attack and Dash on the right.</p>
+          <div class="keys desktop-only"><span class="key">WASD</span><span class="key">move</span><span class="key">SPACE / CLICK</span><span class="key">attack</span><span class="key">SHIFT</span><span class="key">dash</span></div>
+          <p class="note mobile-only">Joystick on the left, Attack and Dash on the right. Menu sits top right.</p>
         </div>
       </div>
     </section>
@@ -132,7 +145,7 @@
         <div class="card step"><div class="n">04  ESCALATE</div><h3>Three phases</h3>
           <p>As its health drops the boss speeds up and its recovery window shrinks, and its arena lights change colour with it.</p></div>
       </div>
-      <div class="card" style="margin-top:16px">
+      <div class="card desktop-only" style="margin-top:16px">
         <h3>Reading the Boss AI card</h3>
         <p><b style="color:var(--text)">Next move</b> shows the move the policy just picked and how likely it was. Low numbers happen: the policy samples, so a 9% dodge is sometimes the pick.</p>
         <p><b style="color:var(--text)">Last 30 seconds</b> is a tick for every decision, coloured by move
@@ -159,7 +172,7 @@
         </table>
       </div>
       <p class="note">The shipped policy is no better than always attacking. It was trained in an earlier version of the game, with a different pace and no state machine. A policy retrained inside this exact game is being evaluated against the same baselines.</p>
-      <p class="note">Policy inference: 0.35 ms median per decision on a desktop CPU (Sentis CPU backend, i9-10900K). The boss decides about once every 1.5 to 2 seconds.</p>
+      <p class="note desktop-only">Policy inference: 0.35 ms median per decision on a desktop CPU (Sentis CPU backend, i9-10900K). The boss decides about once every 1.5 to 2 seconds.</p>
     </section>
   </main>
 
