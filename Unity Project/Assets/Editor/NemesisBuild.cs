@@ -46,6 +46,29 @@ public static class NemesisBuild
         else AssetDatabase.CreateAsset(m, path);
     }
 
+    /// Browser build: Unity Project/Builds/WebGL (gitignored). Gzip with a decompression fallback,
+    /// so it can be served by any static host (GitHub Pages, itch.io) without special headers.
+    public static void BuildWebGL()
+    {
+        CreateFxAssets();
+        PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
+        PlayerSettings.WebGL.decompressionFallback = true;
+        PlayerSettings.WebGL.dataCaching = true;
+        PlayerSettings.WebGL.memorySize = 512;
+        var opts = new BuildPlayerOptions
+        {
+            scenes = new[] { "Assets/Scenes/CombatScene.unity" },
+            locationPathName = "Builds/WebGL",
+            target = BuildTarget.WebGL,
+            options = BuildOptions.None,
+        };
+        BuildReport report = BuildPipeline.BuildPlayer(opts);
+        Debug.Log($"[NemesisBuild] WebGL {report.summary.result} in {report.summary.totalTime}, " +
+                  $"{report.summary.totalErrors} errors, {report.summary.totalSize / (1024 * 1024)} MB");
+        if (report.summary.result != BuildResult.Succeeded)
+            EditorApplication.Exit(1);
+    }
+
     public static void BuildWindows()
     {
         CreateFxAssets();

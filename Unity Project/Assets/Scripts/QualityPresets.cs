@@ -47,6 +47,10 @@ public static class QualityPresets
         else if (vram < 8192 || cores < 8) p = Preset.High;
         else p = Preset.Ultra;
 
+        // Browsers don't report VRAM reliably (it often reads as ~0), so the thresholds above are
+        // meaningless there: default to Medium on desktop browsers and Low on phones and tablets.
+        if (Application.platform == RuntimePlatform.WebGLPlayer)
+            p = Application.isMobilePlatform || handheld ? Preset.Low : Preset.Medium;
         reason = $"{SystemInfo.graphicsDeviceName}, {vram / 1024f:0.#} GB VRAM, {cores} threads";
         return p;
     }

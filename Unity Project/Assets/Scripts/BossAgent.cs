@@ -137,8 +137,11 @@ public class BossAgent : MonoBehaviour
                 m_ProbsOutput = layer.name;
         }
         if (m_ProbsOutput != null) m_RuntimeModel.AddOutput(m_ProbsOutput);
+        // GPUCompute needs compute shaders (absent with -nographics and in browsers); the model is tiny,
+        // so the CPU backend is the safe fallback.
         ActiveBackend = BackendOverride ??
-            (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null
+            (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null ||
+             !SystemInfo.supportsComputeShaders || Application.platform == RuntimePlatform.WebGLPlayer
                 ? BackendType.CPU : BackendType.GPUCompute);
         m_Worker = WorkerFactory.CreateWorker(ActiveBackend, m_RuntimeModel);
         m_Ready = true;

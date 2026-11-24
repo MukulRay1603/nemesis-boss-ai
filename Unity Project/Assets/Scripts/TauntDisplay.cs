@@ -51,6 +51,8 @@ public class TauntDisplay : MonoBehaviour
 
     void Connect()
     {
+        // Browsers have no raw TCP sockets; the taunt bridge is desktop only.
+        if (Application.platform == RuntimePlatform.WebGLPlayer) return;
         try
         {
             _client = new TcpClient("localhost", 9999);
