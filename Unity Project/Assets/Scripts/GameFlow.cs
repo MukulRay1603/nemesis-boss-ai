@@ -75,7 +75,7 @@ public class GameFlow : MonoBehaviour
         MakeButton(card, "FIGHT", "you vs the AI", new Vector2(W * 0.5f - 230, -196), () => Choose(true), true);
         MakeButton(card, "WATCH", "AI vs scripted bot", new Vector2(W * 0.5f + 10, -196), () => Choose(false), false);
 
-        UiKit.Label(card, "ENTER  fight        ESC  watch", 11, new Vector2(0, -318), new Vector2(W, 16),
+        UiKit.Label(card, TouchControls.Active ? "TAP A MODE" : "ENTER  fight        ESC  watch", 11, new Vector2(0, -318), new Vector2(W, 16),
                     TextAlignmentOptions.Center, 6f, UiKit.Faint);
         StartScreenOpen = true;
         PlayerController.InputBlocked = true;

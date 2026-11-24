@@ -110,6 +110,7 @@ public class SettingsMenu : MonoBehaviour
         SetOpen(System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-menuPreview") >= 0, true);
         QualityPresets.Changed += Sync;
         GameFlow.ModeChanged += Sync;
+        TouchControls.MenuPressed += ToggleFromTouch;
         ArenaCamera.ModeChanged += Sync;
         Sync();
     }
@@ -118,6 +119,7 @@ public class SettingsMenu : MonoBehaviour
     {
         QualityPresets.Changed -= Sync;
         GameFlow.ModeChanged -= Sync;
+        TouchControls.MenuPressed -= ToggleFromTouch;
         ArenaCamera.ModeChanged -= Sync;
     }
 
@@ -184,6 +186,8 @@ public class SettingsMenu : MonoBehaviour
         fpsSwitch.on = showFps;
     }
 
+    void ToggleFromTouch() { SetOpen(!open); hintT = 0f; }
+
     void SetOpen(bool v, bool instant = false)
     {
         open = v;
@@ -207,7 +211,7 @@ public class SettingsMenu : MonoBehaviour
 
         // Hint: visible for a few seconds after start or after closing the menu.
         hintT += dt;
-        hintGroup.alpha = UiKit.Ease(hintGroup.alpha, !open && hintT < 6f ? 1f : 0f, 3f);
+        hintGroup.alpha = UiKit.Ease(hintGroup.alpha, !open && hintT < 6f && !TouchControls.Active ? 1f : 0f, 3f);
 
         foreach (var seg in new[] { quality, camera, mode })
         {

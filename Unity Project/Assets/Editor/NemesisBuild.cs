@@ -55,6 +55,7 @@ public static class NemesisBuild
         PlayerSettings.WebGL.decompressionFallback = true;
         PlayerSettings.WebGL.dataCaching = true;
         PlayerSettings.WebGL.memorySize = 512;
+        PlayerSettings.WebGL.template = "PROJECT:Nemesis";   // Assets/WebGLTemplates/Nemesis: full-width game + project page
         var opts = new BuildPlayerOptions
         {
             scenes = new[] { "Assets/Scenes/CombatScene.unity" },

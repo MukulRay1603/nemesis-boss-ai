@@ -146,7 +146,8 @@ public static class UiKit
         c.sortingOrder = order;
         var s = go.AddComponent<CanvasScaler>();
         s.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        s.referenceResolution = new Vector2(1920, 1080);
+        // Phones and tablets: a smaller reference makes every HUD element about 1.3x larger on screen.
+        s.referenceResolution = Application.isMobilePlatform ? new Vector2(1500, 844) : new Vector2(1920, 1080);
         s.matchWidthOrHeight = 1f;
         return c;
     }

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes">
+  <title>Nemesis | A boss driven by a PPO policy</title>
+  <meta name="description" content="A Unity boss fight where every boss move is chosen by a PPO policy running live through Unity Sentis. Watch it fight a scripted bot, or fight it yourself.">
+  <style>
+    :root {
+      --bg: #0b0d12; --bg2: #10131a; --card: rgba(255,255,255,0.04); --edge: rgba(255,255,255,0.08);
+      --text: #f4f5f7; --muted: rgba(244,245,247,0.64); --faint: rgba(244,245,247,0.40);
+      --sky: #85d6ff; --warm: #fbf7f1; --lilac: #cc9eff; --grey: #9ea6b8; --amber: #ffcc73;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--bg); color: var(--text);
+      font: 16px/1.6 "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif; }
+    a { color: var(--sky); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    header { position: sticky; top: 0; z-index: 10; height: 56px; display: flex; align-items: center;
+      justify-content: space-between; padding: 0 24px; background: rgba(11,13,18,0.86);
+      backdrop-filter: blur(10px); border-bottom: 1px solid var(--edge); }
+    .brand { font-weight: 600; letter-spacing: 0.32em; font-size: 15px; }
+    nav a { color: var(--muted); margin-left: 22px; font-size: 14px; letter-spacing: 0.04em; }
+    nav a:hover { color: var(--text); text-decoration: none; }
+
+    /* Game: as large as the window allows, 16:9 */
+    #stage { display: flex; justify-content: center; padding: 16px; }
+    #frame { position: relative; width: min(100%, calc((100vh - 56px - 96px) * 16 / 9)); aspect-ratio: 16 / 9;
+      min-width: 280px; border-radius: 14px; overflow: hidden; background: #000;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.55), 0 0 0 1px var(--edge); }
+    #unity-canvas { width: 100%; height: 100%; display: block; background: #05060a; outline: none; }
+    #loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 18px; background: radial-gradient(ellipse at center, #141823 0%, #05060a 70%); }
+    #loading .title { font-size: clamp(28px, 5vw, 56px); letter-spacing: 0.5em; padding-left: 0.5em; }
+    #bar { width: min(360px, 60%); height: 4px; border-radius: 4px; background: rgba(255,255,255,0.12); overflow: hidden; }
+    #bar > div { height: 100%; width: 0%; background: var(--sky); border-radius: 4px; transition: width 0.2s; }
+    #loading .hint { color: var(--faint); font-size: 13px; letter-spacing: 0.08em; }
+    #toolbar { display: flex; justify-content: center; gap: 12px; padding: 0 16px 8px; color: var(--faint); font-size: 13px; }
+    #toolbar button { background: var(--card); color: var(--muted); border: 1px solid var(--edge); border-radius: 999px;
+      padding: 6px 16px; font: inherit; cursor: pointer; }
+    #toolbar button:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+    #rotate { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; text-align: center;
+      background: rgba(5,6,10,0.92); color: var(--muted); padding: 24px; font-size: 15px; }
+    @media (orientation: portrait) and (max-width: 820px) { #rotate.mobile { display: flex; } }
+    #banner { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); max-width: 90%; }
+    #banner div { background: rgba(20,22,30,0.95); border: 1px solid var(--edge); border-radius: 10px; padding: 8px 14px;
+      font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+
+    main { max-width: 1080px; margin: 0 auto; padding: 24px 24px 80px; }
+    section { margin-top: 56px; }
+    h2 { font-size: 13px; letter-spacing: 0.28em; color: var(--faint); font-weight: 600; margin: 0 0 18px; }
+    h3 { font-size: 20px; margin: 0 0 6px; font-weight: 600; }
+    p { color: var(--muted); margin: 0 0 12px; }
+    .lead { font-size: 19px; color: var(--text); max-width: 760px; }
+    .grid { display: grid; gap: 16px; }
+    .two { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    .four { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .card { background: var(--card); border: 1px solid var(--edge); border-radius: 14px; padding: 22px; }
+    .step { position: relative; }
+    .step .n { font-size: 12px; letter-spacing: 0.2em; color: var(--sky); margin-bottom: 8px; }
+    .keys { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .key { font-size: 12px; letter-spacing: 0.08em; color: var(--text); background: rgba(255,255,255,0.07);
+      border: 1px solid var(--edge); border-radius: 6px; padding: 3px 9px; }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+    table { width: 100%; border-collapse: collapse; font-size: 15px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--edge); }
+    th { color: var(--faint); font-weight: 600; font-size: 12px; letter-spacing: 0.12em; }
+    td.num { font-variant-numeric: tabular-nums; }
+    tr.hl td { color: var(--text); }
+    .note { font-size: 14px; color: var(--faint); margin-top: 12px; }
+    footer { border-top: 1px solid var(--edge); color: var(--faint); font-size: 13px; text-align: center; padding: 28px 16px; }
+    /* Phones and tablets: the game takes the whole screen; the page scrolls below it. */
+    body.mobile header { display: none; }
+    body.mobile #stage { padding: 0; }
+    body.mobile #frame { width: min(100vw, calc(100dvh * 16 / 9)); border-radius: 0; box-shadow: none; }
+    body.mobile #toolbar { padding-top: 10px; }
+    @media (max-width: 640px) { nav a { margin-left: 14px; font-size: 13px; } header { padding: 0 14px; } main { padding: 16px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">NEMESIS</div>
+    <nav><a href="#play">Play</a><a href="#how">How it works</a><a href="#results">Results</a><a href="https://github.com/MukulRay1603/nemesis-boss-ai">Source</a></nav>
+  </header>
+
+  <div id="stage">
+    <div id="frame">
+      <canvas id="unity-canvas" tabindex="-1"></canvas>
+      <div id="loading">
+        <div class="title">NEMESIS</div>
+        <div id="bar"><div></div></div>
+        <div class="hint" id="loading-text">Loading, about 14 MB</div>
+      </div>
+      <div id="rotate">Turn your phone sideways to play.</div>
+      <div id="banner"></div>
+    </div>
+  </div>
+  <div id="toolbar">
+    <button id="fullscreen">Fullscreen</button>
+    <span id="device-hint">Keyboard and mouse, or touch</span>
+  </div>
+
+  <main>
+    <section id="play">
+      <h2>TWO WAYS TO SEE IT</h2>
+      <p class="lead">Every move the boss makes is picked by a small neural network, live, inside the game. Watch it fight a scripted opponent, or step in and fight it yourself.</p>
+      <div class="grid two">
+        <div class="card">
+          <h3>Watch</h3>
+          <p>The AI boss fights a scripted hunter bot. This is the setup used for every measured result below, so what you see is what was evaluated.</p>
+          <div class="keys"><span class="key">ESC</span><span class="key">settings</span><span class="key">TAB</span><span class="key">AI card</span><span class="key">C</span><span class="key">camera</span></div>
+        </div>
+        <div class="card">
+          <h3>Fight</h3>
+          <p>You control the hunter. Read the boss's wind-up, dash out of range, and punish it while it recovers.</p>
+          <div class="keys"><span class="key">WASD</span><span class="key">move</span><span class="key">SPACE / CLICK</span><span class="key">attack</span><span class="key">SHIFT</span><span class="key">dash</span></div>
+          <p class="note">On a phone or tablet: joystick on the left, Attack and Dash on the right.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="how">
+      <h2>HOW THE AI WORKS</h2>
+      <div class="grid four">
+        <div class="card step"><div class="n">01  OBSERVE</div><h3>14 numbers</h3>
+          <p>Health of both fighters, positions, distance, phase, stamina, the opponent's velocity, its own last move and the fight clock.</p></div>
+        <div class="card step"><div class="n">02  DECIDE</div><h3>PPO policy</h3>
+          <p>A two-layer network trained with PPO, exported to ONNX and run in Unity Sentis. It outputs a probability for each move and samples one.</p></div>
+        <div class="card step"><div class="n">03  ACT</div><h3>State machine</h3>
+          <p>The chosen move plays out through fixed, readable states: telegraph, attack, recovery or dodge. The policy picks what; the state machine controls how.</p></div>
+        <div class="card step"><div class="n">04  ESCALATE</div><h3>Three phases</h3>
+          <p>As its health drops the boss speeds up and its recovery window shrinks, and its arena lights change colour with it.</p></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>Reading the Boss AI card</h3>
+        <p><b style="color:var(--text)">Next move</b> shows the move the policy just picked and how likely it was. Low numbers happen: the policy samples, so a 9% dodge is sometimes the pick.</p>
+        <p><b style="color:var(--text)">Last 30 seconds</b> is a tick for every decision, coloured by move
+          (<span class="dot" style="background:var(--warm)"></span>attack
+          <span class="dot" style="background:var(--sky)"></span>dodge
+          <span class="dot" style="background:var(--lilac)"></span>special
+          <span class="dot" style="background:var(--grey)"></span>idle), with markers where the boss changes phase.</p>
+        <p><b style="color:var(--text)">Mix</b> shows how often it chose each move in each phase, so you can see its behaviour shift as it gets hurt.</p>
+      </div>
+    </section>
+
+    <section id="results">
+      <h2>MEASURED RESULTS</h2>
+      <p>Measured in the game build, headless, against the scripted bot. 600 fights per row (3 seeds x 200), fights capped at 90 s. Same seed gives byte-identical results.</p>
+      <div class="card" style="padding:8px 10px">
+        <table>
+          <thead><tr><th>BOSS</th><th>WIN RATE VS DEFAULT BOT</th><th>WIN RATE VS HARD BOT</th></tr></thead>
+          <tbody>
+            <tr class="hl"><td>Shipped PPO policy (v3)</td><td class="num">85.0%</td><td class="num">82.3%</td></tr>
+            <tr><td>Same boss, always attack</td><td class="num">82.7%</td><td class="num">86.7%</td></tr>
+            <tr><td>Same boss, random move</td><td class="num">99.7%</td><td class="num">70.2%</td></tr>
+            <tr><td>Scripted boss, no wind-up or recovery</td><td class="num">100.0%</td><td class="num">100.0%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">The shipped policy is no better than always attacking. It was trained in an earlier version of the game, with a different pace and no state machine. A policy retrained inside this exact game is being evaluated against the same baselines.</p>
+      <p class="note">Policy inference: 0.35 ms median per decision on a desktop CPU (Sentis CPU backend, i9-10900K). The boss decides about once every 1.5 to 2 seconds.</p>
+    </section>
+  </main>
+
+  <footer>Nemesis by Mukul Rayana. Unity 2022.3, Unity Sentis 1.2, URP.</footer>
+
+  <script>
+    var canvas = document.querySelector("#unity-canvas");
+    var loading = document.querySelector("#loading");
+    var bar = document.querySelector("#bar > div");
+    var banner = document.querySelector("#banner");
+    var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+    if (isMobile) {
+      document.body.classList.add("mobile");
+      document.querySelector("#rotate").classList.add("mobile");
+      document.querySelector("#device-hint").textContent = "Touch controls: joystick left, Attack and Dash right";
+    }
+
+    function unityShowBanner(msg, type) {
+      var div = document.createElement("div");
+      div.textContent = msg;
+      banner.appendChild(div);
+      if (type !== "error") setTimeout(function () { banner.removeChild(div); }, 5000);
+    }
+
+    var buildUrl = "Build";
+    var config = {
+      dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
+      frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
+#if USE_THREADS
+      workerUrl: buildUrl + "/{{{ WORKER_FILENAME }}}",
+#endif
+#if USE_WASM
+      codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
+#endif
+#if MEMORY_FILENAME
+      memoryUrl: buildUrl + "/{{{ MEMORY_FILENAME }}}",
+#endif
+#if SYMBOLS_FILENAME
+      symbolsUrl: buildUrl + "/{{{ SYMBOLS_FILENAME }}}",
+#endif
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+      productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+      productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+      showBanner: unityShowBanner,
+      // Cap the render resolution on high-DPI screens to keep phones and laptops smooth.
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2),
+    };
+
+    var script = document.createElement("script");
+    script.src = buildUrl + "/{{{ LOADER_FILENAME }}}";
+    script.onload = function () {
+      createUnityInstance(canvas, config, function (p) { bar.style.width = (100 * p) + "%"; })
+        .then(function (instance) {
+          loading.style.transition = "opacity 0.4s";
+          loading.style.opacity = "0";
+          setTimeout(function () { loading.remove(); }, 450);
+          canvas.focus({ preventScroll: true });
+          document.querySelector("#fullscreen").onclick = function () { instance.SetFullscreen(1); };
+        })
+        .catch(function (e) {
+          document.querySelector("#loading-text").textContent = "This browser could not start the game: " + e;
+        });
+    };
+    canvas.addEventListener("pointerdown", function () { canvas.focus({ preventScroll: true }); });
+    document.body.appendChild(script);
+  </script>
+</body>
+</html>

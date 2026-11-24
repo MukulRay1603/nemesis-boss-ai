@@ -155,6 +155,14 @@ public class BossDebugOverlay : MonoBehaviour
 
         // ── Boss AI card, bottom right
         var card = UiKit.Card(rt, "BossAI", new Vector2(1f, 0f), new Vector2(-40, 40), new Vector2(CardW, 352));
+        if (TouchControls.Active)
+        {
+            // The right thumb needs the bottom-right corner: move the card up under the versus card, smaller.
+            var cardRoot = (RectTransform)card.parent;
+            cardRoot.anchorMin = cardRoot.anchorMax = cardRoot.pivot = new Vector2(1f, 1f);
+            cardRoot.anchoredPosition = new Vector2(-40, -156);
+            cardRoot.localScale = Vector3.one * 0.8f;
+        }
         float px = 24f;
         UiKit.Label(card, "BOSS AI", 12, new Vector2(px, -20), new Vector2(Inner, 18), TextAlignmentOptions.Left, 10f, UiKit.Muted);
         UiKit.Label(card, "PPO  ·  ONNX  ·  Sentis", 11, new Vector2(px, -20), new Vector2(Inner, 18), TextAlignmentOptions.Right, 2f, UiKit.Faint);
@@ -395,7 +403,7 @@ public class BossDebugOverlay : MonoBehaviour
             }
         }
 
-        controls.alpha = Mathf.Lerp(controls.alpha, Human ? 1f : 0f, 1f - Mathf.Exp(-6f * dt));
+        controls.alpha = Mathf.Lerp(controls.alpha, Human && !TouchControls.Active ? 1f : 0f, 1f - Mathf.Exp(-6f * dt));
 
         titleT += dt;
         float alpha = titleT < 0.35f ? titleT / 0.35f : titleT < 1.9f ? 1f : Mathf.Clamp01(1f - (titleT - 1.9f) / 0.6f);

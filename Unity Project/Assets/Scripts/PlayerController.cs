@@ -45,6 +45,9 @@ public class PlayerController : MonoBehaviour
     private float dashTimer, dashCdTimer, invulnTimer;
     private Vector3 dashDir;
     public static bool InputBlocked = false;  // set while a menu is open
+    // Touch controls (TouchControls.cs) write these; they share the keyboard path below.
+    public static Vector2 VirtualMove;
+    public static bool VirtualAttack, VirtualDash;
 
     // ── Components ─────────────────────────────────────────────────────────
     private Rigidbody rb;
@@ -144,8 +147,11 @@ public class PlayerController : MonoBehaviour
     // ──────────────────────────────────────────────────────────────────────
     void Update()
     {
-        if (!humanControlled || InputBlocked) return;
-        if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0)) wantAttack = true;
+        if (!humanControlled || InputBlocked) { VirtualAttack = VirtualDash = false; return; }
+        if (VirtualAttack) { wantAttack = true; VirtualAttack = false; }
+        if (VirtualDash) { wantDash = true; VirtualDash = false; }
+        // On touch screens a tap on the screen is not an attack; the ATTACK button is.
+        if (Input.GetKeyDown(KeyCode.Space) || (Input.GetMouseButtonDown(0) && !TouchControls.Active)) wantAttack = true;
         if (Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.RightShift)) wantDash = true;
     }
 
@@ -170,6 +176,7 @@ public class PlayerController : MonoBehaviour
             if (Input.GetKey(KeyCode.S)) move -= fwd;
             if (Input.GetKey(KeyCode.D)) move += right;
             if (Input.GetKey(KeyCode.A)) move -= right;
+            move += fwd * VirtualMove.y + right * VirtualMove.x;
         }
         move = move.sqrMagnitude > 0.01f ? move.normalized : Vector3.zero;
 
