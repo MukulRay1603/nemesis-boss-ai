@@ -62,7 +62,13 @@ public class BossAgent : MonoBehaviour
     private Model m_RuntimeModel;
     private IWorker m_Worker;
     private bool m_Ready = false;
-    private const int OBS_SIZE = 14;
+    private const int BASE_OBS = 14;
+    // 14 for v3/v4 models; 18 for models that also read the opponent profile (v5).
+    // Taken from the model's obs_0 input, or from TrainingObsSize when an external trainer drives the boss.
+    public int ObsSize { get; private set; } = BASE_OBS;
+    public static int TrainingObsSize = BASE_OBS;
+    public PlayerProfile Profile { get; } = new PlayerProfile();
+    public bool UsesProfile => ObsSize >= BASE_OBS + 4;
 
     private System.Diagnostics.Stopwatch m_SW = new System.Diagnostics.Stopwatch();
 
@@ -137,6 +143,8 @@ public class BossAgent : MonoBehaviour
                 m_ProbsOutput = layer.name;
         }
         if (m_ProbsOutput != null) m_RuntimeModel.AddOutput(m_ProbsOutput);
+        ObsSize = ReadObsSize(m_RuntimeModel);
+        if (ExternalPolicy != null) ObsSize = TrainingObsSize;
         // GPUCompute needs compute shaders (absent with -nographics and in browsers); the model is tiny,
         // so the CPU backend is the safe fallback.
         ActiveBackend = BackendOverride ??
@@ -176,6 +184,7 @@ public class BossAgent : MonoBehaviour
         isPulsing = false;
         phaseSpeedMult = 1f;
         recoveryDuration = 0.85f;   // reset to base in case phase 2 shortened it
+        Profile.Reset();
         m_Swings = 0;
         m_Hits = 0;
         m_ActionCounts = new int[4];
@@ -197,6 +206,8 @@ public class BossAgent : MonoBehaviour
         UpdatePhase();
         HandlePulse();
         RunStateMachine();
+        Profile.Step(transform.position, player.position,
+                     playerController != null ? playerController.StateIndex : 0, Time.fixedDeltaTime);
 
         float pHP = playerController != null ? playerController.playerHP : 0f;
         bool bossWins = pHP <= 0f;
@@ -360,7 +371,7 @@ public class BossAgent : MonoBehaviour
             return ext;
         }
 
-        var obsTensor = new TensorFloat(new TensorShape(1, OBS_SIZE), obs);
+        var obsTensor = new TensorFloat(new TensorShape(1, ObsSize), obs);
         var maskTensor = new TensorFloat(new TensorShape(1, 4), masks);
 
         m_Worker.SetInput("obs_0", obsTensor);
@@ -406,12 +417,23 @@ public class BossAgent : MonoBehaviour
         return action;
     }
 
+    static int ReadObsSize(Model model)
+    {
+        foreach (var input in model.inputs)
+            if (input.name == "obs_0")
+            {
+                try { var d = input.shape[input.shape.rank - 1]; if (d.isValue && d.value > 0) return d.value; }
+                catch { }
+            }
+        return BASE_OBS;
+    }
+
     float[] BuildObservations()
     {
         float arena = 10f;
         float maxPHP = playerController != null ? playerController.maxHP : 250f;
         float pHP = playerController != null ? playerController.playerHP : maxPHP;
-        float[] obs = new float[OBS_SIZE];
+        float[] obs = new float[ObsSize];
 
         obs[0] = bossHP / maxHP;
         obs[1] = pHP / maxPHP;
@@ -427,6 +449,7 @@ public class BossAgent : MonoBehaviour
         obs[11] = bossStamina / maxStamina;
         obs[12] = episodeTime / maxEpisodeTime;
         obs[13] = 1f / 3f;
+        if (UsesProfile) Profile.Write(obs, BASE_OBS);
         return obs;
     }
 
@@ -479,7 +502,11 @@ public class BossAgent : MonoBehaviour
         else { transform.localScale = Vector3.one; isPulsing = false; }
     }
 
-    public void TakeDamage(float damage) => bossHP -= damage;
+    public void TakeDamage(float damage)
+    {
+        bossHP -= damage;
+        Profile.OnBossHit();
+    }
 
     void OnDestroy() => m_Worker?.Dispose();
 }

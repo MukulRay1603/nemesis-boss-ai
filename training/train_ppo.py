@@ -12,6 +12,7 @@ from a softmax), so Unity Project/Assets/Models/BossAgent.onnx can be swapped wi
 
 Usage (from the repo root, with the training venv):
     python training/train_ppo.py --envs 12 --total-steps 3000000 --max-hours 3 --run-id ppo_v4
+    python training/train_ppo.py --envs 12 --obs 18 --run-id ppo_v5               # adaptive: + opponent profile
     python training/train_ppo.py --envs 2 --total-steps 4096 --run-id smoke     # quick check
 
 Outputs in results/<run-id>/: BossAgent.onnx (final), checkpoints/, log.csv, config.json.
@@ -32,7 +33,14 @@ import torch
 import torch.nn as nn
 
 OBS, ACT = 14, 4
-MSG_IN = struct.Struct("<14f4ffii")      # obs, mask, reward, done, outcome
+MSG_IN = struct.Struct("<14f4ffii")      # obs, mask, reward, done, outcome (rebuilt for --obs)
+
+
+def set_obs_size(n):
+    """14 = base inputs (v3/v4); 18 = base + opponent profile (v5)."""
+    global OBS, MSG_IN
+    OBS = n
+    MSG_IN = struct.Struct(f"<{n}f4ffii")
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_EXE = os.path.join(REPO, "Unity Project", "Builds", "Windows", "Nemesis.exe")
 
@@ -50,7 +58,7 @@ class UnityEnvs:
             s.listen(1)
             servers.append(s)
             args = [exe, "-batchmode", "-nographics", "-nemesisTrain", str(base_port + i),
-                    "-seed", str(seed * 1000 + i), "-timeScale", str(time_scale),
+                    "-seed", str(seed * 1000 + i), "-timeScale", str(time_scale), "-obs", str(OBS),
                     "-logFile", os.path.join(log_dir, f"unity_{i}.log")]
             self.procs.append(subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
         for s in servers:
@@ -69,7 +77,8 @@ class UnityEnvs:
                 raise ConnectionError("Unity instance closed the connection")
             buf += chunk
         v = MSG_IN.unpack(buf)
-        return np.array(v[:14], np.float32), np.array(v[14:18], np.float32), v[18], v[19], v[20]
+        return (np.array(v[:OBS], np.float32), np.array(v[OBS:OBS + 4], np.float32),
+                v[OBS + 4], v[OBS + 5], v[OBS + 6])
 
     def first(self):
         out = [self._recv(c) for c in self.conns]
@@ -193,7 +202,10 @@ def main():
     ap.add_argument("--port", type=int, default=6100)
     ap.add_argument("--run-id", default="ppo_v4")
     ap.add_argument("--checkpoint-every", type=int, default=20, help="updates")
+    ap.add_argument("--obs", type=int, default=14, choices=[14, 18],
+                    help="14 = base inputs; 18 = base + opponent profile (adaptive boss)")
     a = ap.parse_args()
+    set_obs_size(a.obs)
 
     out = os.path.join(REPO, "results", a.run_id)
     os.makedirs(os.path.join(out, "checkpoints"), exist_ok=True)

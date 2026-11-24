@@ -7,7 +7,7 @@ using UnityEngine;
 /// Activated with:  -nemesisTrain PORT  [-seed N] [-timeScale X] [-randomizePlayer 0|1]
 ///
 /// At every boss decision point the game sends one message and blocks until the action arrives:
-///   Unity -> Python  14 float obs, 4 float mask, float reward since the last decision,
+///   Unity -> Python  14 (or 18 with -obs 18) float obs, 4 float mask, float reward since the last decision,
 ///                    int done (1 = the previous decision's episode ended; obs is a fresh episode),
 ///                    int outcome of that episode (0 none, 1 boss win, 2 player win, 3 timeout)
 ///   Python -> Unity  int action
@@ -47,6 +47,7 @@ public class TrainingBridge : MonoBehaviour
         int seed = Arg("-seed") != null ? int.Parse(Arg("-seed")) : 1;
         tb.rng = new System.Random(seed);
         tb.randomize = Arg("-randomizePlayer") != "0";
+        if (Arg("-obs") != null) BossAgent.TrainingObsSize = int.Parse(Arg("-obs"));   // 14 or 18
         UnityEngine.Random.InitState(seed);
         Time.timeScale = Mathf.Clamp(Arg("-timeScale") != null ? float.Parse(Arg("-timeScale"), System.Globalization.CultureInfo.InvariantCulture) : 100f, 1f, 100f);
         Application.targetFrameRate = -1;
