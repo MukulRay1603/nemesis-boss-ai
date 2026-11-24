@@ -9,8 +9,46 @@ using UnityEngine;
 /// </summary>
 public static class NemesisBuild
 {
+    /// Materials the runtime effects load from Resources. Saved as assets so the build keeps
+    /// their shader variants (transparent additive particles, emissive Lit), which Unity would
+    /// otherwise strip because no scene material uses them.
+    [MenuItem("Nemesis/Create FX Materials")]
+    public static void CreateFxAssets()
+    {
+        const string dir = "Assets/Resources/NemesisFX";
+        if (!AssetDatabase.IsValidFolder("Assets/Resources")) AssetDatabase.CreateFolder("Assets", "Resources");
+        if (!AssetDatabase.IsValidFolder(dir)) AssetDatabase.CreateFolder("Assets/Resources", "NemesisFX");
+
+        var add = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
+        add.SetFloat("_Surface", 1f);          // transparent
+        add.SetFloat("_Blend", 2f);            // additive
+        add.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        add.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+        add.SetFloat("_ZWrite", 0f);
+        add.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        add.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+        add.SetColor("_BaseColor", Color.white);
+        Save(add, dir + "/FX_Additive.mat");
+
+        var lit = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        lit.EnableKeyword("_EMISSION");
+        lit.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+        lit.SetColor("_EmissionColor", Color.black);
+        lit.SetFloat("_Smoothness", 0.4f);
+        Save(lit, dir + "/FX_EmissiveLit.mat");
+        AssetDatabase.SaveAssets();
+    }
+
+    static void Save(Material m, string path)
+    {
+        var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (existing != null) { EditorUtility.CopySerialized(m, existing); EditorUtility.SetDirty(existing); }
+        else AssetDatabase.CreateAsset(m, path);
+    }
+
     public static void BuildWindows()
     {
+        CreateFxAssets();
         var opts = new BuildPlayerOptions
         {
             scenes = new[] { "Assets/Scenes/CombatScene.unity" },

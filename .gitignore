@@ -146,3 +146,4 @@ service-account*.json
 # Recorded gameplay video (large binaries, kept local)
 media/*
 !media/README.md
+!media/preview.png

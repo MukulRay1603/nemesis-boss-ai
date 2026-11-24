@@ -59,6 +59,9 @@ public class BossDebugOverlay : MonoBehaviour
 
     void OnDestroy() => EpisodeStats.Ended -= OnEnded;
 
+    public bool Visible => root != null && root.activeSelf;
+    public void SetVisible(bool v) { if (root != null) root.SetActive(v); }
+
     void OnEnded(EpisodeResult r)
     {
         if (r.outcome == "BOSS_WIN") bossWins++;

@@ -121,6 +121,7 @@ public class ScriptedBoss : MonoBehaviour
             {
                 playerController?.TakeDamage(attackDamage);
                 hits++;
+                CombatEvents.RaiseHit(player.position, attackDamage, true, false);
                 attackTimer = attackCooldown;
                 float pHP = playerController != null ? playerController.playerHP : 0f;
                 Debug.Log($"[FSM] Hit player | pHP={pHP:F1}");

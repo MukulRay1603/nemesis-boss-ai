@@ -264,6 +264,7 @@ public class BossAgent : MonoBehaviour
                         bossStamina -= 20f;
                         playerController?.TakeDamage(dmg);
                         m_Hits++;
+                        CombatEvents.RaiseHit(player.position, dmg, true, true);
                         Debug.Log($"[Boss] SPECIAL hit | " +
                                   $"pHP={(playerController?.playerHP ?? 0f):F1}");
                     }
@@ -271,6 +272,7 @@ public class BossAgent : MonoBehaviour
                     {
                         playerController?.TakeDamage(dmg);
                         m_Hits++;
+                        CombatEvents.RaiseHit(player.position, dmg, true, false);
                         Debug.Log($"[Boss] Hit | " +
                                   $"pHP={(playerController?.playerHP ?? 0f):F1}");
                     }

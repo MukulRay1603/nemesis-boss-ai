@@ -128,6 +128,12 @@ public class EvalRunner : MonoBehaviour
     void Update()
     {
         if (done) return;
+        if (mode != Mode.Episodes)
+        {
+            // Graphics presets may turn vsync on; measurement and capture need it off.
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = -1;
+        }
 
         if (mode == Mode.Frames)
         {
@@ -148,6 +154,29 @@ public class EvalRunner : MonoBehaviour
         var cam = Camera.main;
         var rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4 };
         cam.targetTexture = rt;
+
+        // UI goes through a separate overlay camera with no post-processing, so bloom and
+        // tonemapping on the 3D scene do not wash out the HUD text.
+        const int uiLayer = 5;
+        var uiGo = new GameObject("RecordUICamera");
+        var uiCam = uiGo.AddComponent<Camera>();
+        uiCam.cullingMask = 1 << uiLayer;
+        // A second camera draws only the UI into its own transparent texture, which is then
+        // alpha-blended over the scene image each frame.
+        // URP writes opaque alpha, so render the UI over black and over white and recover coverage
+        // from the difference (see Resources/NemesisFX/UIComposite.shader).
+        var uiBlack = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4 };
+        var uiWhite = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4 };
+        uiCam.clearFlags = CameraClearFlags.SolidColor;
+        uiCam.depth = cam.depth + 1;
+        var compose = new Material(Resources.Load<Shader>("NemesisFX/UIComposite"));
+        compose.SetTexture("_UIBlack", uiBlack);
+        compose.SetTexture("_UIWhite", uiWhite);
+        var outRt = new RenderTexture(width, height, 0, RenderTextureFormat.ARGB32);
+        var uiData = UnityEngine.Rendering.Universal.CameraExtensions.GetUniversalAdditionalCameraData(uiCam);
+        uiData.renderPostProcessing = false;
+        uiData.antialiasing = UnityEngine.Rendering.Universal.AntialiasingMode.None;
+        cam.cullingMask &= ~(1 << uiLayer);
         var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
 
         string outFile = outPrefix.EndsWith(".mp4") ? outPrefix : outPrefix + ".mp4";
@@ -168,13 +197,17 @@ public class EvalRunner : MonoBehaviour
                 if (c.isRootCanvas && c.renderMode == RenderMode.ScreenSpaceOverlay)
                 {
                     c.renderMode = RenderMode.ScreenSpaceCamera;
-                    c.worldCamera = cam;
+                    c.worldCamera = uiCam;
                     c.planeDistance = 1f;
+                    foreach (var tr in c.GetComponentsInChildren<Transform>(true)) tr.gameObject.layer = uiLayer;
                 }
             // -batchmode skips the normal render loop, so draw the camera ourselves.
             if (Application.isBatchMode) cam.Render();
+            uiCam.targetTexture = uiBlack; uiCam.backgroundColor = Color.black; uiCam.Render();
+            uiCam.targetTexture = uiWhite; uiCam.backgroundColor = Color.white; uiCam.Render();
+            Graphics.Blit(rt, outRt, compose);
             var prev = RenderTexture.active;
-            RenderTexture.active = rt;
+            RenderTexture.active = outRt;
             tex.ReadPixels(new Rect(0, 0, width, height), 0, 0, false);
             RenderTexture.active = prev;
             var bytes = tex.GetRawTextureData();

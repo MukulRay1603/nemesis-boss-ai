@@ -29,6 +29,9 @@ public class PlayerController : MonoBehaviour
     }
     private PlayerState state = PlayerState.KeepDistance;
 
+    // Read-only, for the animation layer (FighterAnimator). 0 KeepDistance, 1 Strafe, 2 Commit, 3 Retreat, 4 Dodge
+    public int StateIndex => (int)state;
+
     // ── Components ─────────────────────────────────────────────────────────
     private Rigidbody rb;
     private Transform boss;
@@ -86,6 +89,7 @@ public class PlayerController : MonoBehaviour
     // ── Helper: deal damage to whichever boss is active ───────────────────
     private void DamageBoss(float dmg)
     {
+        if (boss != null) CombatEvents.RaiseHit(boss.position, dmg, false, false);
         if (bossAgent != null && bossAgent.enabled)
             bossAgent.TakeDamage(dmg);
         else if (scriptedBoss != null && scriptedBoss.enabled)
