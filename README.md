@@ -9,7 +9,7 @@ A boss fight in Unity where the boss's decisions come from a PPO policy (trained
 - **Policy-driven boss.** Every time the boss is idle it reads 14 observations and asks the ONNX policy for one of four actions: idle, attack, dodge or special attack. The chosen action then plays out through a fixed state machine: Idle, Telegraph (wind-up), Attack, Recovery (vulnerable), Dodge.
 - **Phase escalation.** Below 66% and 33% HP the boss speeds up (x1.3, x1.6) and its recovery window shrinks (0.85 s, 0.65 s, 0.45 s).
 - **Scripted opponent.** `PlayerController` keeps its distance, punishes the boss during Recovery, and dodges wind-ups.
-- **AI overlay.** A HUD shows the boss's current state, the policy's probability for each action at the last decision (read from the model's softmax layer), the time each decision took, and the action mix per phase.
+- **AI overlay.** A minimal HUD (soft-shadowed type and hairline bars, no panels) shows the boss's current state, the policy's probability for each action at the last decision (read from the model's softmax layer), the time each decision took, and the action mix per phase as stacked bars.
 - **Presentation layer.** A third-person lock-on camera, energy blades with procedural sword animation tied to the boss's real state machine, telegraph rings that show attack range and wind-up progress, hit sparks, damage numbers, phase-coloured arena lighting and post-processing. All of it is visual only and does not change fight outcomes (verified below).
 - **Graphics presets.** Low, Medium, High and Ultra, plus Auto, which picks one from the machine's VRAM, CPU threads and shader level.
 - **Taunts (optional).** `llm_layer/state_bridge.py` receives game state over TCP and returns a short in-character line from Groq (`llama-3.3-70b-versatile`), filtered by a NeMo Guardrails config.
@@ -77,7 +77,7 @@ Requirements: Unity 2022.3.62f3 (packages resolve from `Unity Project/Packages/m
 | High | URP-HighFidelity | 1.0 | 4x MSAA + SMAA | 50 m | full, with bloom | full |
 | Ultra | URP-HighFidelity | 1.5 | 4x MSAA + SMAA | 80 m | full, with bloom | full + pillar lights |
 
-Auto picks Low for handhelds, shader level below 4.5 or under 2 GB VRAM; Medium for integrated GPUs, under 4 GB VRAM or under 4 threads; High under 8 GB VRAM or under 8 threads; Ultra otherwise. The choice is saved between runs. Command-line overrides: `-quality low|medium|high|ultra|auto`, `-camera third|broadcast`, `-fixedCamera` (original scene camera), `-noFx`, `-noOverlay`.
+Auto picks Low for handhelds, shader level below 4.5 or under 2 GB VRAM; Medium for integrated GPUs, under 4 GB VRAM or under 4 threads; High under 8 GB VRAM or under 8 threads; Ultra otherwise. The choice is saved between runs. Command-line overrides: `-quality low|medium|high|ultra|auto`, `-camera third|broadcast`, `-fixedCamera` (original scene camera), `-noFx`, `-noOverlay`, `-menuPreview` (open the settings menu at start, for screenshots).
 
 ### Taunt bridge (optional)
 
@@ -203,6 +203,7 @@ nemesis-boss-ai/
       FighterAnimator.cs  energy blades and procedural sword animation
       QualityPresets.cs   Low / Medium / High / Ultra / Auto
       SettingsMenu.cs     in-game settings
+      UiKit.cs            shared HUD palette, type and rounded bars
       TauntDisplay.cs     taunt bridge client and dialogue panel
     Assets/Editor/NemesisBuild.cs   command-line build, FX material generation
     Assets/Resources/NemesisFX/     effect materials and the recording composite shader

@@ -18,9 +18,9 @@ public class ArenaCamera : MonoBehaviour
     public Transform boss, player;
 
     [Header("Third person")]
-    public float distance = 6.2f;
-    public float height = 3.1f;
-    public float shoulder = 2.1f;
+    public float distance = 7.4f;
+    public float height = 3.5f;
+    public float shoulder = 2.3f;
     public float lookBias = 0.65f;          // 0 = look at player, 1 = look at boss
     public float positionSmooth = 0.16f;
 
@@ -117,7 +117,8 @@ public class ArenaCamera : MonoBehaviour
         // The floating "HUNTER" label sits right in the line of sight from behind the player.
         if (playerLabel == null)
             foreach (Transform c in player) if (c.name.StartsWith("Label_")) playerLabel = c.gameObject;
-        if (playerLabel != null) playerLabel.SetActive(CurrentMode == Mode.Broadcast);
+        if (playerLabel != null && FindObjectOfType<BossDebugOverlay>() == null)
+            playerLabel.SetActive(CurrentMode == Mode.Broadcast);
         Desired(out var target, out var look);
 
         float dt = Time.deltaTime;

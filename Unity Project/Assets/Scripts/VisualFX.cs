@@ -232,13 +232,13 @@ public class VisualFX : MonoBehaviour
             var top = Lit(Color.black, 0.5f, PhaseCol[0] * 2.5f);
             trimMats.Add(top);
             Block(name + "_TrimTop", new Vector3(p.x, p.y + s.y * 0.5f + 0.03f, p.z),
-                  len + thin * (s.x < s.z ? s.x : s.z) * 1.04f + Vector3.up * 0.07f, top);
+                  len + thin * 0.12f + Vector3.up * 0.04f, top);
             Block(name + "_TrimFloor", new Vector3(p.x, 0.06f, p.z) + inward * ((alongX ? s.z : s.x) * 0.5f + 0.02f),
                   len + thin * 0.06f + Vector3.up * 0.06f, top);
         }
 
         // Faint arena markings on the floor.
-        foreach (float r in new[] { 3.2f, 7.6f })
+        foreach (float r in new[] { 7.6f })
         {
             var lr = NewLine("FloorRing", 0.05f);
             SetCircle(lr, new Vector3(0, 0.02f, 0), r, 96);
@@ -293,8 +293,6 @@ public class VisualFX : MonoBehaviour
         bossVisorMat = Lit(Color.black, 0.8f, PhaseCol[0] * 4f);
         Block("Visor", new Vector3(0, 0.5f, 0.45f), new Vector3(0.75f, 0.13f, 0.18f), bossVisorMat, bb);
         Block("Core", new Vector3(0, 0.05f, 0.47f), new Vector3(0.22f, 0.22f, 0.1f), bossVisorMat, bb);
-        Block("PauldronL", new Vector3(-0.55f, 0.55f, 0f), new Vector3(0.35f, 0.18f, 0.6f), bossVisorMat, bb);
-        Block("PauldronR", new Vector3(0.55f, 0.55f, 0f), new Vector3(0.35f, 0.18f, 0.6f), bossVisorMat, bb);
         playerVisorMat = Lit(Color.black, 0.8f, new Color(0.3f, 0.9f, 1f) * 3f);
         Block("Visor", new Vector3(0, 0.5f, 0.45f), new Vector3(0.6f, 0.1f, 0.15f), playerVisorMat, playerAnim.body);
 
@@ -425,7 +423,7 @@ public class VisualFX : MonoBehaviour
         Color c = byBoss ? (special ? new Color(1f, 0.2f, 0.9f) : PhaseCol[phase]) : new Color(0.4f, 0.95f, 1f);
         int count = new[] { 8, 16, 30, 40 }[QualityPresets.FxTier];
         Burst(pos + Vector3.up * 0.4f, c, special ? count * 2 : count);
-        Popup(pos, dmg, byBoss ? new Color(1f, 0.35f, 0.3f) : new Color(1f, 0.9f, 0.55f), special);
+        Popup(pos, dmg, byBoss ? new Color(1f, 0.6f, 0.55f) : new Color(1f, 1f, 1f), special);
         AddRing(new Vector3(pos.x, 0.05f, pos.z), 0.3f, special ? 3.2f : 2.0f, 0.35f, c, 0.12f);
         if (byBoss) { playerFlash = 1f; hurtPulse = special ? 1f : 0.7f; chromaPulse = special ? 1f : 0.6f; }
         else bossFlash = 1f;
@@ -458,11 +456,11 @@ public class VisualFX : MonoBehaviour
         go.transform.SetParent(transform);
         var t = go.AddComponent<TextMeshPro>();
         t.text = big ? $"-{dmg:0}!" : $"-{dmg:0}";
-        t.fontSize = big ? 7f : 5f;
+        t.fontSize = big ? 6f : 4.5f;
         t.alignment = TextAlignmentOptions.Center;
-        t.fontStyle = FontStyles.Bold;
-        t.outlineWidth = 0.2f;
-        t.outlineColor = new Color32(0, 0, 0, 200);
+        t.fontStyle = FontStyles.Normal;
+        if (UiKit.ShadowMaterial != null) t.fontSharedMaterial = UiKit.ShadowMaterial;
+        t.characterSpacing = 4f;
         float jx = (float)(rng.NextDouble() - 0.5) * 0.8f;
         popups.Add(new PopupItem { tmp = t, p = pos + new Vector3(jx, 1.5f, 0), col = col });
     }
@@ -490,13 +488,13 @@ public class VisualFX : MonoBehaviour
 
         // Arena trim follows the boss's phase.
         foreach (var m in trimMats)
-            m.SetColor("_EmissionColor", pc * (1.6f + 1.2f * enrage + 3f * phasePulse));
+            m.SetColor("_EmissionColor", pc * (0.9f + 0.8f * enrage + 3f * phasePulse));
         foreach (var l in pillarLights)
         {
             l.color = pc;
             l.intensity = 1.4f + 0.4f * Mathf.PerlinNoise(t * 3f, l.GetInstanceID() * 0.01f) + 2f * phasePulse;
         }
-        foreach (var lr in floorRings) SetLineColor(lr, pc * new Color(1, 1, 1, 0.22f + 0.2f * phasePulse));
+        foreach (var lr in floorRings) SetLineColor(lr, pc * new Color(1, 1, 1, 0.12f + 0.2f * phasePulse));
 
         // Boss body: mirror the colour BossAgent sets, add emission for wind-up and hits.
         var state = boss.currentBossState;
