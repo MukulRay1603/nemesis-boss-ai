@@ -33,9 +33,21 @@ v3 action mix (default bot): attack 88.2 to 89.5%, dodge 5.6 to 6.4%, special 2.
 
 Every non-win is a timeout except where player wins are listed.
 
-### v4 / v5 (retrained in the shipped game)
+### v4: retrained in the shipped game (2026-11-24, eval finished 05:20). Data: `eval/unity/v4_*`, model `results/ppo_v4/`
 
-Pending: overnight run 2026-11-24 from 04:00 (`training/overnight.ps1`, log in `results/overnight_*.log`). Fill in from `eval/unity/v4_*` and `v5_*` with `python eval/update_results.py`.
+Training: custom PPO, 12 instances, 1,327,104 decisions in 75 min (time cap), 14 inputs, randomised opponent.
+
+| Boss | vs default bot | vs hard bot |
+|---|---|---|
+| v4 PPO policy | 100.0% (99.4 to 100.0), 27 s avg | 100.0% (99.4 to 100.0), 27 s avg |
+
+Action mix: default bot idle 0.0 to 0.2%, attack 0.0%, dodge 12.6 to 13.2%, special 86.8 to 87.2%; hard bot dodge 6.3 to 6.6%, special 93.4 to 93.6% (per seed).
+
+Reading: v4 beats every baseline in the same boss body and finishes fights 2.7x faster than v3, but by a degenerate strategy: special whenever stamina allows (20 damage, longer lunge, 20 stamina which refills in 5 s), dodge while waiting, never the normal attack. RL exposed that the special attack is dominant, which is a game balance finding (see D-019).
+
+### v5: adaptive
+
+Pending (training started 05:20).
 
 ## Inference time per decision
 
