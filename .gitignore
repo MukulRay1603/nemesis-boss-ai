@@ -147,3 +147,8 @@ service-account*.json
 media/*
 !media/README.md
 !media/preview.png
+
+# Training run byproducts (final model, log and config are kept)
+results/*/unity_logs/
+results/*/checkpoints/
+results/overnight_*.log

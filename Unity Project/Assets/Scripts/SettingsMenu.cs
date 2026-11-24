@@ -36,7 +36,7 @@ public class SettingsMenu : MonoBehaviour
     TextMeshProUGUI fpsText, hint, autoNote;
     CanvasGroup hintGroup;
     float hintT;
-    Segmented quality, camera;
+    Segmented quality, camera, mode;
     Switch overlaySwitch, fpsSwitch;
     bool showFps = true;
     float fpsAccum; int fpsFrames;
@@ -78,7 +78,7 @@ public class SettingsMenu : MonoBehaviour
         menu = m.AddComponent<CanvasGroup>();
 
         const float W = 640f;
-        var c = UiKit.Group(mrt, "Content", new Vector2(0.5f, 0.5f), new Vector2(0, 20), new Vector2(W, 440));
+        var c = UiKit.Group(mrt, "Content", new Vector2(0.5f, 0.5f), new Vector2(0, 60), new Vector2(W, 520));
         UiKit.Label(c, "SETTINGS", 26, Vector2.zero, new Vector2(W, 36), TextAlignmentOptions.Center, 20f);
         UiKit.Pill(c, new Vector2(W * 0.5f - 18, -50), new Vector2(36, 2), UiKit.Faint, "Rule");
 
@@ -102,10 +102,14 @@ public class SettingsMenu : MonoBehaviour
         });
         fpsSwitch = MakeSwitch(c, "FPS counter", new Vector2(W * 0.5f + 40, -326), () => showFps = !showFps);
 
-        UiKit.Label(c, "ESC  to close", 11, new Vector2(0, -400), new Vector2(W, 16), TextAlignmentOptions.Center, 6f, UiKit.Faint);
+        Section(c, "MODE", -390);
+        mode = MakeSegmented(c, new[] { "Fight", "Watch" }, -414, W, i => GameFlow.SetMode(i == 0));
+
+        UiKit.Label(c, "ESC  to close", 11, new Vector2(0, -486), new Vector2(W, 16), TextAlignmentOptions.Center, 6f, UiKit.Faint);
 
         SetOpen(System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-menuPreview") >= 0, true);
         QualityPresets.Changed += Sync;
+        GameFlow.ModeChanged += Sync;
         ArenaCamera.ModeChanged += Sync;
         Sync();
     }
@@ -113,6 +117,7 @@ public class SettingsMenu : MonoBehaviour
     void OnDestroy()
     {
         QualityPresets.Changed -= Sync;
+        GameFlow.ModeChanged -= Sync;
         ArenaCamera.ModeChanged -= Sync;
     }
 
@@ -171,6 +176,7 @@ public class SettingsMenu : MonoBehaviour
         if (quality == null) return;
         quality.selected = QualityPresets.IsAuto ? 0 : (int)QualityPresets.Current + 1;
         camera.selected = ArenaCamera.CurrentMode == ArenaCamera.Mode.ThirdPerson ? 0 : 1;
+        mode.selected = GameFlow.HumanMode ? 0 : 1;
         var rec = QualityPresets.Detect(out string why);
         autoNote.text = $"Running {QualityPresets.Current}.   Auto suggests {rec} for {why}.";
         var o = FindObjectOfType<BossDebugOverlay>();
@@ -190,7 +196,10 @@ public class SettingsMenu : MonoBehaviour
     void Update()
     {
         float dt = Time.unscaledDeltaTime;
-        if (Input.GetKeyDown(KeyCode.Escape)) { SetOpen(!open); hintT = 0f; }
+        // Ignore the Esc that just closed the start screen (same frame).
+        if (Input.GetKeyDown(KeyCode.Escape) && !GameFlow.StartScreenOpen && Time.frameCount != GameFlow.ClosedFrame)
+        { SetOpen(!open); hintT = 0f; }
+        if (!GameFlow.StartScreenOpen) PlayerController.InputBlocked = open;
 
         menu.alpha = UiKit.Ease(menu.alpha, open ? 1f : 0f, 12f);
         menu.gameObject.SetActive(menu.alpha > 0.01f || open);
@@ -200,7 +209,7 @@ public class SettingsMenu : MonoBehaviour
         hintT += dt;
         hintGroup.alpha = UiKit.Ease(hintGroup.alpha, !open && hintT < 6f ? 1f : 0f, 3f);
 
-        foreach (var seg in new[] { quality, camera })
+        foreach (var seg in new[] { quality, camera, mode })
         {
             var l = (RectTransform)seg.labels[seg.selected].transform;
             float tx = l.anchoredPosition.x, tw = l.sizeDelta.x;

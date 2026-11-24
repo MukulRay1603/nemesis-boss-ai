@@ -59,6 +59,65 @@ public static class UiKit
         }
     }
 
+    static Sprite card;
+
+    /// Rounded rectangle (radius 14 px at reference resolution), 9-sliced so cards of any size keep their corners.
+    public static Sprite CardSprite
+    {
+        get
+        {
+            if (card != null) return card;
+            const int n = 64, r = 14;
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var px = new Color32[n * n];
+            for (int y = 0; y < n; y++)
+                for (int x = 0; x < n; x++)
+                {
+                    float cx = Mathf.Clamp(x + 0.5f, r, n - r), cy = Mathf.Clamp(y + 0.5f, r, n - r);
+                    float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(cx, cy));
+                    px[y * n + x] = new Color(1, 1, 1, Mathf.Clamp01(r - d));
+                }
+            tex.SetPixels32(px);
+            tex.Apply();
+            card = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f, 0,
+                                 SpriteMeshType.FullRect, new Vector4(r + 1, r + 1, r + 1, r + 1));
+            return card;
+        }
+    }
+
+    public static readonly Color CardFill = new Color(0.06f, 0.07f, 0.10f, 0.58f);
+    public static readonly Color CardEdge = new Color(1f, 1f, 1f, 0.09f);
+
+    /// A glassy card: translucent fill with a faint 1 px edge. Returns the content RectTransform
+    /// (pivot top-left), so children can be positioned from the card's top-left like a Group.
+    public static RectTransform Card(Transform parent, string name, Vector2 anchor, Vector2 pos, Vector2 size, Color? fillColor = null)
+    {
+        var edge = new GameObject(name, typeof(RectTransform), typeof(Image));
+        edge.transform.SetParent(parent, false);
+        var ert = (RectTransform)edge.transform;
+        ert.anchorMin = ert.anchorMax = ert.pivot = anchor;
+        ert.anchoredPosition = pos;
+        ert.sizeDelta = size;
+        var ei = edge.GetComponent<Image>();
+        ei.sprite = CardSprite; ei.type = Image.Type.Sliced; ei.color = CardEdge; ei.raycastTarget = false;
+
+        var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
+        fill.transform.SetParent(edge.transform, false);
+        var frt = (RectTransform)fill.transform;
+        frt.anchorMin = Vector2.zero; frt.anchorMax = Vector2.one;
+        frt.offsetMin = new Vector2(1, 1); frt.offsetMax = new Vector2(-1, -1);
+        var fi = fill.GetComponent<Image>();
+        fi.sprite = CardSprite; fi.type = Image.Type.Sliced; fi.color = fillColor ?? CardFill; fi.raycastTarget = false;
+
+        var content = new GameObject("Content", typeof(RectTransform));
+        content.transform.SetParent(edge.transform, false);
+        var crt = (RectTransform)content.transform;
+        crt.anchorMin = crt.anchorMax = crt.pivot = new Vector2(0, 1);
+        crt.anchoredPosition = Vector2.zero;
+        crt.sizeDelta = size;
+        return crt;
+    }
+
     /// Soft, low-contrast shadow under the text (TMP underlay), shared by all HUD text.
     public static Material ShadowMaterial
     {

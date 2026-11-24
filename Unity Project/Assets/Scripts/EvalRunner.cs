@@ -47,6 +47,17 @@ public class EvalRunner : MonoBehaviour
     int fps = 30, width = 1920, height = 1080, stopAfterFights = 0;
     string ffmpegPath = "ffmpeg";
     float fsmDamageUsed;
+    string playerPreset = "default";
+
+    /// Harder scripted opponent used for evaluation: moves 30% faster, attacks 25% more often,
+    /// keeps a wider gap and retreats faster. Damage and HP are unchanged.
+    public static void ApplyHardPlayer(PlayerController pc)
+    {
+        pc.moveSpeed *= 1.3f;
+        pc.attackCooldown *= 0.75f;
+        pc.safeDistance *= 1.2f;
+        pc.retreatSpeed *= 1.2f;
+    }
     string policyName = "onnx";
 
     static string ArgValue(string name)
@@ -109,6 +120,11 @@ public class EvalRunner : MonoBehaviour
         string fsmDmg = ArgValue("-fsmDamage");
         if (fsmDmg != null) fsm.attackDamage = float.Parse(fsmDmg, CultureInfo.InvariantCulture);
         fsmDamageUsed = fsm.attackDamage;
+
+        // Opponent difficulty. "default" = scene values; "hard" = faster, more aggressive bot.
+        playerPreset = (ArgValue("-playerPreset") ?? "default").ToLowerInvariant();
+        var pc = rl.player != null ? rl.player.GetComponent<PlayerController>() : null;
+        if (pc != null && playerPreset == "hard") ApplyHardPlayer(pc);
 
         if (mode == Mode.Episodes)
         {
@@ -266,6 +282,7 @@ public class EvalRunner : MonoBehaviour
         Kv("sentis_backend", Q(rlBoss != null && rlBoss.enabled ? rlBoss.ActiveBackend.ToString() : "n/a"));
         if (boss == "fsm") Kv("fsm_damage", fsmDamageUsed.ToString(inv));
         if (boss == "rl") Kv("policy", Q(policyName));
+        Kv("player_preset", Q(playerPreset));
         Kv("wall_seconds", (Time.realtimeSinceStartup - wallStart).ToString("F1", inv));
         if (results.Count > 0)
         {

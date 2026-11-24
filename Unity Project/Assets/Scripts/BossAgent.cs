@@ -81,6 +81,10 @@ public class BossAgent : MonoBehaviour
     // the policy's choice. "random" = uniform over unmasked actions, "attack" = always action 1.
     // The network still runs every decision so timings stay comparable.
     public static string PolicyOverride = null;
+
+    // Set by TrainingBridge: the external trainer picks the action instead of the ONNX model.
+    public delegate int ExternalPolicyFn(float[] obs, float[] mask);
+    public static ExternalPolicyFn ExternalPolicy = null;
     private System.Random m_AblationRng;
     public float[] LastProbs { get; } = new float[4];
     public float[] LastMask { get; } = { 1f, 1f, 1f, 1f };
@@ -259,9 +263,10 @@ public class BossAgent : MonoBehaviour
                     hasHitThisAttack = true;
                     float dmg = pendingAction == 3 ? attackDamage * 2f : attackDamage;
 
-                    if (pendingAction == 3 && bossStamina >= 20f)
+                    // Fix: in phase 3 the mask allows the special at any stamina, so it must also land.
+                    if (pendingAction == 3 && (bossStamina >= 20f || currentPhase >= 2))
                     {
-                        bossStamina -= 20f;
+                        bossStamina = Mathf.Max(0f, bossStamina - 20f);
                         playerController?.TakeDamage(dmg);
                         m_Hits++;
                         CombatEvents.RaiseHit(player.position, dmg, true, true);
@@ -342,6 +347,15 @@ public class BossAgent : MonoBehaviour
         float[] obs = BuildObservations();
         float[] masks = { 1f, 1f, 1f, 1f };
         if (currentPhase < 2 && bossStamina < 20f) masks[3] = 0f;
+
+        if (ExternalPolicy != null)
+        {
+            int ext = ExternalPolicy(obs, masks);
+            for (int i = 0; i < 4; i++) LastMask[i] = masks[i];
+            Decisions++;
+            if (ext >= 0 && ext < 4) m_ActionCounts[ext]++;
+            return ext;
+        }
 
         var obsTensor = new TensorFloat(new TensorShape(1, OBS_SIZE), obs);
         var maskTensor = new TensorFloat(new TensorShape(1, 4), masks);

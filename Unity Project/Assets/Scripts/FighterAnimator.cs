@@ -96,12 +96,14 @@ public class FighterAnimator : MonoBehaviour
         return go;
     }
 
-    void OnEnable() => CombatEvents.Hit += OnHit;
-    void OnDisable() => CombatEvents.Hit -= OnHit;
+    void OnEnable() { CombatEvents.Hit += OnHit; PlayerController.Swung += OnSwing; }
+    void OnDisable() { CombatEvents.Hit -= OnHit; PlayerController.Swung -= OnSwing; }
+
+    void OnSwing() { if (player != null) playerSwing = 0f; }   // human swings animate even on a miss
 
     void OnHit(Vector3 pos, float dmg, bool byBoss, bool special)
     {
-        if (player != null && !byBoss) playerSwing = 0f;   // the player's blow just landed
+        if (player != null && !byBoss && !player.humanControlled) playerSwing = 0f;   // the bot's blow just landed
     }
 
     static float EaseOut(float k) => 1f - (1f - k) * (1f - k) * (1f - k);

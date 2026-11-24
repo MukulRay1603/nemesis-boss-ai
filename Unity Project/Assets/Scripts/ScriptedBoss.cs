@@ -17,7 +17,7 @@ public class ScriptedBoss : MonoBehaviour
 
     [Header("Combat — identical to BossAgent")]
     public float attackRange  = 2.4f;
-    public float attackDamage = 8f;
+    public float attackDamage = 10f;   // matched to BossAgent
     public float moveSpeed    = 3.0f;
     public float dodgeSpeed   = 6.0f;
     public float attackCooldown = 1.2f;

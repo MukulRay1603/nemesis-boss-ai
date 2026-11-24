@@ -32,6 +32,20 @@ public class PlayerController : MonoBehaviour
     // Read-only, for the animation layer (FighterAnimator). 0 KeepDistance, 1 Strafe, 2 Commit, 3 Retreat, 4 Dodge
     public int StateIndex => (int)state;
 
+    // ── Human control (play mode). Off by default, so the scripted bot and all evaluation are unchanged.
+    [Header("Human control (play mode)")]
+    public bool humanControlled = false;
+    public float humanAttackCooldown = 0.8f;
+    public float dashSpeed = 9f;
+    public float dashDuration = 0.22f;
+    public float dashCooldown = 0.8f;
+    public float dashInvulnerability = 0.2f;
+    public static event System.Action Swung;   // any human attack, hit or miss (for animation)
+    private bool wantAttack, wantDash;
+    private float dashTimer, dashCdTimer, invulnTimer;
+    private Vector3 dashDir;
+    public static bool InputBlocked = false;  // set while a menu is open
+
     // ── Components ─────────────────────────────────────────────────────────
     private Rigidbody rb;
     private Transform boss;
@@ -77,6 +91,8 @@ public class PlayerController : MonoBehaviour
     {
         playerHP = maxHP;
         state = PlayerState.KeepDistance;
+        dashTimer = dashCdTimer = invulnTimer = 0f;
+        wantAttack = wantDash = false;
         attackTimer = 0f;
         dodgeTimer = 0f;
         retreatTimer = 0f;
@@ -126,10 +142,82 @@ public class PlayerController : MonoBehaviour
     }
 
     // ──────────────────────────────────────────────────────────────────────
+    void Update()
+    {
+        if (!humanControlled || InputBlocked) return;
+        if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0)) wantAttack = true;
+        if (Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.RightShift)) wantDash = true;
+    }
+
+    void HumanFixedUpdate()
+    {
+        float dt = Time.fixedDeltaTime;
+        attackTimer -= dt; dashTimer -= dt; dashCdTimer -= dt; invulnTimer -= dt; colorTimer -= dt;
+        if (colorTimer <= 0f) SetColor(IdleColor);
+
+        Vector3 dirToBoss = (boss.position - transform.position); dirToBoss.y = 0f;
+        float dist = dirToBoss.magnitude;
+        dirToBoss = dist > 0.001f ? dirToBoss / dist : transform.forward;
+
+        // Camera-relative WASD
+        var cam = Camera.main;
+        Vector3 fwd = cam != null ? Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up).normalized : Vector3.forward;
+        Vector3 right = Vector3.Cross(Vector3.up, fwd);
+        Vector3 move = Vector3.zero;
+        if (!InputBlocked)
+        {
+            if (Input.GetKey(KeyCode.W)) move += fwd;
+            if (Input.GetKey(KeyCode.S)) move -= fwd;
+            if (Input.GetKey(KeyCode.D)) move += right;
+            if (Input.GetKey(KeyCode.A)) move -= right;
+        }
+        move = move.sqrMagnitude > 0.01f ? move.normalized : Vector3.zero;
+
+        if (wantDash && dashCdTimer <= 0f)
+        {
+            dashDir = move != Vector3.zero ? move : -dirToBoss;
+            dashTimer = dashDuration;
+            dashCdTimer = dashCooldown;
+            invulnTimer = dashInvulnerability;
+            SetColor(DodgeColor); colorTimer = 0.3f;
+        }
+        wantDash = false;
+
+        if (dashTimer > 0f)
+        {
+            state = PlayerState.Dodge;
+            rb.MovePosition(transform.position + dashDir * dashSpeed * dt);
+        }
+        else
+        {
+            state = move != Vector3.zero ? PlayerState.Strafe : PlayerState.KeepDistance;
+            rb.MovePosition(transform.position + move * moveSpeed * 1.6f * dt);
+        }
+
+        if (wantAttack && attackTimer <= 0f)
+        {
+            attackTimer = humanAttackCooldown;
+            Swung?.Invoke();
+            if (dist <= attackRange)
+            {
+                DamageBoss(attackDamage);
+                SetColor(AttackColor); colorTimer = 0.3f;
+            }
+        }
+        wantAttack = false;
+
+        transform.rotation = Quaternion.LookRotation(dirToBoss);
+        Vector3 p = transform.position;
+        p.x = Mathf.Clamp(p.x, -arenaLimit, arenaLimit);
+        p.z = Mathf.Clamp(p.z, -arenaLimit, arenaLimit);
+        transform.position = p;
+    }
+
     void FixedUpdate()
     {
         // ← FIXED: only bail if boss transform is missing entirely
         if (boss == null) return;
+        if (humanControlled) { HumanFixedUpdate(); return; }
 
         // Tick timers
         attackTimer -= Time.fixedDeltaTime;
@@ -316,5 +404,9 @@ public class PlayerController : MonoBehaviour
         else mat.color = c;
     }
 
-    public void TakeDamage(float damage) => playerHP -= damage;
+    public void TakeDamage(float damage)
+    {
+        if (humanControlled && invulnTimer > 0f) return;   // dash i-frames (play mode only)
+        playerHP -= damage;
+    }
 }
