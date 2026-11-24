@@ -78,8 +78,14 @@ The state at 0bff669 is reviewed in [AUDIT.md](AUDIT.md).
 
 **Overnight job status at 04:11:** v4 training running (239,616 decisions in 11.5 min, in-training boss win rate 1.00, policy entropy 0.03). Expected: v4 eval ~05:30, v5 training to ~06:45, v5 eval ~07:00.
 
+**Overnight results** (2026-11-24, job 04:00 to 06:37)
+- v4 (14 inputs) and v5 (18 inputs, opponent profile) both win 600/600 against the default and the hard bot, about 27 s per fight. Both use the special attack for 86 to 94% of decisions (D-019). v5 shows no visible adaptation against these bots. Details in RESULTS.md.
+- README results table regenerated and "Reading this honestly" rewritten.
+- Model state: `Unity Project/Assets/Models/BossAgent.onnx` restored to the committed v3 file (shipped model still pending D-018). Note: `Builds/Windows/Nemesis.exe` was rebuilt by the overnight eval and currently contains **v5**; the WebGL build still has v3. Rebuild both after Ray picks the model.
+- Kept: final `BossAgent.onnx`, `agent.pt`, `log.csv`, `config.json` per run (committed), eval CSVs and summaries (committed), the overnight log (gitignored, kept on disk). Moved to the Recycle Bin: per-run `checkpoints/` and `unity_logs/` folders.
+
 ### Open items
-1. Read `results/overnight_*.log`; run `python eval/update_results.py`; rewrite the README "Reading this honestly" paragraph to match.
+1. Ray picks the shipped model (D-018) and the special-attack fix (D-019) before any further training.
 2. Ray picks the shipped model (D-018); rebuild WebGL; re-record the clip (check gpu.lock first).
 3. Hosting choice (D-017); results page charts and trailer.
 4. Training throughput: asynchronous env stepping and an env-count benchmark (8 / 12 / 16 / 20).

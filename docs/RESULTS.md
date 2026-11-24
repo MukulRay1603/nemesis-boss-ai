@@ -45,9 +45,17 @@ Action mix: default bot idle 0.0 to 0.2%, attack 0.0%, dodge 12.6 to 13.2%, spec
 
 Reading: v4 beats every baseline in the same boss body and finishes fights 2.7x faster than v3, but by a degenerate strategy: special whenever stamina allows (20 damage, longer lunge, 20 stamina which refills in 5 s), dodge while waiting, never the normal attack. RL exposed that the special attack is dominant, which is a game balance finding (see D-019).
 
-### v5: adaptive
+### v5: adaptive, 18 inputs (2026-11-24, eval finished 06:37). Data: `eval/unity/v5_*`, model `results/ppo_v5/`
 
-Pending (training started 05:20).
+Training: same setup as v4 plus the 4 opponent-profile inputs (PlayerProfile: aggression, evasion, range, pressure), 1,419,264 decisions in 75 min (time cap).
+
+| Boss | vs default bot | vs hard bot |
+|---|---|---|
+| v5 PPO policy | 100.0% (99.4 to 100.0), 26.7 s avg (seeds 26.46 / 27.06 / 26.54) | 100.0% (99.4 to 100.0), 27.8 s avg (27.78 / 28.28 / 27.20) |
+
+Action mix: default bot idle 0.0 to 0.2%, attack 0.0 to 0.1%, dodge 12.9 to 13.6%, special 86.2 to 86.9%; hard bot dodge 6.8 to 7.3%, special 92.5 to 93.2% (per seed).
+
+Reading: same strategy as v4. The profile inputs did not produce visible adaptation against these two bots; the special-attack imbalance (D-019) dominates. A fair test of adaptation needs the balance fixed first and opponents with clearly different styles.
 
 ## Inference time per decision
 
@@ -62,7 +70,10 @@ Method: stopwatch around tensor setup, `Execute` and readback in `BossAgent.Quer
 | 2026-11-23 | PPO export (smoke model), Sentis CPU, headless, 5 episodes | 230 | 0.20 ms | 0.19 ms | 0.30 ms | 0.39 ms |
 | 2026-11-23 | 18-input export (v5 smoke), Sentis CPU, headless, 5 episodes | 220 | 0.47 ms | 0.38 ms | 0.93 ms | 1.43 ms |
 
-The GPUCompute row is a small sample on a shared GPU; treat it as indicative only.
+| 2026-11-24 | v4, Sentis CPU, headless, overnight eval (3 seeds x 2 bots) | 17,917 | 0.61 to 0.64 ms | 0.44 to 0.45 ms | 1.38 to 1.51 ms | 3.4 to 4.0 ms |
+| 2026-11-24 | v5 (18 inputs), same | 17,960 | 0.27 to 0.28 ms | 0.26 ms | 0.37 to 0.38 ms | 0.46 to 0.51 ms |
+
+The GPUCompute row is a small sample on a shared GPU; treat it as indicative only. The v4 and v5 rows are per-seed ranges from the overnight log; the two networks differ only in input size (14 vs 18), so the v4/v5 gap most likely comes from machine load at the time, not the model. Not investigated.
 
 ## Frame time
 
@@ -82,6 +93,8 @@ Seeded runs (`-seed N`, which seeds the bot, the FSM boss and the policy's sampl
 | 2026-11-23 | 2 game instances, smoke test | 1,024 decisions in about 6 s |
 | 2026-11-23 | 12 instances, dry run | 768 decisions, start to shutdown 9 s |
 | 2026-11-24 | 12 instances, v4 overnight, first 11.5 min | 239,616 decisions (about 20,800 per minute) |
+| 2026-11-24 | 12 instances, v4 full run (75 min cap) | 1,327,104 decisions (about 17,700 per minute) |
+| 2026-11-24 | 12 instances, v5 full run (75 min cap) | 1,419,264 decisions (about 18,900 per minute) |
 
 ## Builds
 

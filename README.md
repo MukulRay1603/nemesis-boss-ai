@@ -23,6 +23,8 @@ The default bot is the scene's scripted opponent; the hard bot moves 30% faster,
 <!-- RESULTS:START -->
 | Boss | vs default bot | vs hard bot |
 |---|---|---|
+| Retrained PPO policy, adaptive (v5) | 100.0% (99.4% to 100.0%), 27 s avg | 100.0% (99.4% to 100.0%), 28 s avg |
+| Retrained PPO policy (v4) | 100.0% (99.4% to 100.0%), 27 s avg | 100.0% (99.4% to 100.0%), 27 s avg |
 | Original PPO policy (v3) | 85.0% (81.9% to 87.6%), 74 s avg | 82.3% (79.1% to 85.2%), 78 s avg |
 | Same boss, always attack | 82.7% (79.4% to 85.5%), 77 s avg | 86.7% (83.7% to 89.2%), 77 s avg |
 | Same boss, random move | 99.7% (98.8% to 99.9%), 55 s avg | 70.2% (66.4% to 73.7%), 77 s avg |
@@ -33,7 +35,9 @@ Boss win rate with 95% Wilson interval and mean fight length. 600 fights per cel
 
 Per-episode CSVs and summaries are in [`eval/unity/`](eval/unity/).
 
-**Reading this honestly.** Against this player bot, the trained policy is not better than "always attack" in the same boss body, and a uniformly random policy wins more often and faster. The policy picks attack about 89% of the time (dodge about 6%, special about 2.5%, idle about 2.7%). The scripted FSM boss wins every fight, but it is a different body: it has no telegraph and no recovery window, so the bot never gets a punish opening. The likely cause is a train/deploy mismatch (see [Known issues](#known-issues)): the policy was trained in an earlier version of the game with one action per physics step, 100 HP, 15 s episodes and no state machine.
+**Reading this honestly.** The original v3 policy is not better than "always attack" in the same boss body, and a uniformly random policy beats the default bot more often and faster. v3 picks attack about 89% of the time. The likely cause is a train/deploy mismatch (see [Known issues](#known-issues)): it was trained in an earlier version of the game with one action per physics step, 100 HP, 15 s episodes and no state machine.
+
+Retraining in the shipped game (v4, and v5 with four opponent-profile inputs, about 1.3 to 1.4 million decisions each in 75 minutes) wins every evaluation fight against both bots in about 27 s, 2.7x faster than v3. Both reached this by the same narrow strategy: the special attack whenever stamina allows (86 to 94% of decisions), dodge while it recharges, and almost never the normal attack. That says the special is overpowered in the current balance, not that the boss plays well. v5's extra inputs did not change its behaviour against these bots. The scripted FSM boss also wins every fight, but it is a different body with no telegraph and no recovery window.
 
 **Inference time per decision** (tensor setup, `Execute`, and reading the result back), Sentis 1.2 on the CPU backend, i9-10900K, measured over every decision in the RL runs above (about 8,200 decisions per seed, first 10 skipped as warm-up):
 

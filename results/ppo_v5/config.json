@@ -1,0 +1,21 @@
+{
+  "exe": "D:\\Projects\\Nemesis\\nemesis-boss-ai\\Unity Project\\Builds\\Windows\\Nemesis.exe",
+  "envs": 12,
+  "total_steps": 3000000,
+  "max_hours": 1.25,
+  "rollout": 512,
+  "epochs": 4,
+  "minibatch": 1024,
+  "lr": 0.0003,
+  "gamma": 0.99,
+  "lam": 0.95,
+  "clip": 0.2,
+  "ent": 0.01,
+  "vf": 0.5,
+  "time_scale": 100,
+  "seed": 1,
+  "port": 6100,
+  "run_id": "ppo_v5",
+  "checkpoint_every": 20,
+  "obs": 18
+}
