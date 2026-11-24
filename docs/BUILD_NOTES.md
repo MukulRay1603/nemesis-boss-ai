@@ -82,7 +82,7 @@ The state at 0bff669 is reviewed in [AUDIT.md](AUDIT.md).
 - v4 (14 inputs) and v5 (18 inputs, opponent profile) both win 600/600 against the default and the hard bot, about 27 s per fight. Both use the special attack for 86 to 94% of decisions (D-019). v5 shows no visible adaptation against these bots. Details in RESULTS.md.
 - README results table regenerated and "Reading this honestly" rewritten.
 - Model state: `Unity Project/Assets/Models/BossAgent.onnx` restored to the committed v3 file (shipped model still pending D-018). Note: `Builds/Windows/Nemesis.exe` was rebuilt by the overnight eval and currently contains **v5**; the WebGL build still has v3. Rebuild both after Ray picks the model.
-- Kept: final `BossAgent.onnx`, `agent.pt`, `log.csv`, `config.json` per run (committed), eval CSVs and summaries (committed), the overnight log (gitignored, kept on disk). Moved to the Recycle Bin: per-run `checkpoints/` and `unity_logs/` folders.
+- Kept: final `BossAgent.onnx`, `agent.pt`, `log.csv`, `config.json` per run (committed), eval CSVs and summaries (committed), the overnight log (gitignored, kept on disk). Moved to the Recycle Bin: per-run `checkpoints/` and `unity_logs/` folders and the session's `%TEMP%\nem` scratch folder. The four test clips from that scratch folder (v2 to v4 looks, 2026-11-23) were kept in `media/archive/` (gitignored) for the visual history.
 
 ### Open items
 1. Ray picks the shipped model (D-018) and the special-attack fix (D-019) before any further training.
