@@ -23,6 +23,21 @@ Start from the legacy build's look (captured first, see gallery) rather than the
 | Experience metrics | Fight length, close calls, telegraph-before-every-hit, beyond win rate | half a day |
 | Behaviour regression check | A test that fails if a new model's win rate or fight length leaves its band | half a day |
 
+## 2b. AI direction after v4/v5 (researched 2026-11-26, awaiting Ray)
+
+Ray's point: nerfing the special and retraining only swaps one trick for another, and the boss feels scripted again. Agreed. The root cause is not the move list but the opponent: both models trained against one scripted bot that never punishes the special, and any optimiser exploits a fixed opponent. What studios do instead:
+
+| Option | Precedent | What it gives Nemesis |
+|---|---|---|
+| A. Co-trained hunter (self-play league) | AlphaStar league; Ubisoft For Honor bots trained against past versions of themselves; NCSOFT Blade & Soul (62% vs pros); Naruto Mobile "Shukai" heterogeneous league | The hunter is also an RL agent (it drives the existing virtual inputs). It learns to bait and sidestep the special, so the boss has to mix up. Snapshots of both sides form a league. No balance change: if a learning hunter cannot counter the special, that proves it is a balance bug. Demo: an arms-race timeline, generation by generation |
+| B. Persona-conditioned boss | EA SEED MultiGAIL (one agent that switches and blends personas); quality-diversity / MAP-Elites play-style work | One network with a style input (aggressive, patient, trickster) and a behaviour map showing each style lands in a different region (gap kept, special share, dodge timing) |
+| C. Learns from real players | Sony AI BeTAIL (imitation from human racing) | Opt-in recordings of web-build fights, behaviour-cloned into "ghost hunters" that join the league, so the boss trains against human habits |
+| D. Designer intent in the reward | GT Sophy: racing etiquette encoded in the reward | Fairness terms (telegraph before every hit, a small variety bonus) as a dial, measured, not hard rules |
+
+Proposed order: A first (it is the headline and answers D-019 without a manual nerf), then B with the behaviour map in the AI Lab, then C once the web build is hosted. D only as a tuning dial.
+
+Cost: A is about 1 to 2 days of code (hunter action channel in `TrainingBridge`, two policies and an opponent pool in `train_ppo.py`) plus overnight CPU runs, only when Ray is not gaming.
+
 ## 3. Showcase
 
 - 90 s video: legacy look to final look, the AI card explained, AI Lab, difficulty dial, live link.

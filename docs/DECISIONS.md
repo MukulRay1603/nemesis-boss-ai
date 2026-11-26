@@ -22,4 +22,4 @@ Each entry: what was decided, the options, the choice, and who chose. "Ray" = pr
 | D-016 | 2026-11-24 | Mobile layout | Same as desktop; compact | Compact: fewer details on the AI card, scaled versus card, FPS off, shorter page | Ray |
 | D-017 | 2026-11-24 | Hosting | GitHub Pages; itch.io | Pending | Ray |
 | D-018 | 2026-11-24 | Which model ships | v3; v4; v5 | Pending the overnight results | Ray |
-| D-019 | 2026-11-24 | Special attack is dominant (found by v4) | Keep; raise its cost (stamina or cooldown); lower its damage; reward shaping for variety | Pending | Ray |
+| D-019 | 2026-11-24 | Special attack is dominant (found by v4) | Keep; raise its cost (stamina or cooldown); lower its damage; reward shaping for variety; co-trained RL hunter that learns to punish it (REDESIGN 2b) | Pending. Ray (2026-11-26): manual nerfs make the boss feel scripted; asked for research. Recommended: co-trained hunter | Ray |
