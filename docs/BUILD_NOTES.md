@@ -109,3 +109,9 @@ Phase 0 is Ray's original work. Everything from 2026-11-23 on was written with a
 - `training/train_league.py`: two PPO learners, snapshot pool (every 10 updates, 8 kept), per-fight assignment (current vs current; 20% current boss vs past hunter; 15% past boss vs current hunter; 15% current boss vs scripted bot). Logs win rates per matchup and the boss's special share per update, which is the arms-race chart.
 - Smoke test (2 instances, 6,144 rounds, boss started from v5): runs end to end, exports both ONNX models, all instances exit. Numbers from it are not results.
 - Next: the full run (needs Ray's OK, CPU for about 3 h), then a Sentis hunter brain in the game so evaluation and the AI Lab can show boss vs learned hunter.
+
+**Legacy capture** (2026-11-26, about 03:00 to 03:10, GPU lock taken and released for each attempt)
+- `Unity Project/Build/Nemesis-ai.exe` turned out to be the 30 March ML-Agents training environment (its log stops at "Registered Communicator in Agent"; it waits for a trainer and nothing moves). It is not the legacy fight.
+- The legacy game was therefore built from tag `v1.0-legacy` in a separate worktree (`..\nemesis-legacy`), with no code changes. The one file added was the scene's post-processing profile `SampleSceneProfile.asset` (gitignored in the original repo, present on Ray's disk; the unchanged Unity template file dated 2024). Unity re-serialised three URP assets and `ShaderGraphSettings.asset` on import (format upgrade only).
+- Capture problems solved: the legacy player pauses when unfocused (`runInBackground: 0`), so the script keeps it in front; grabbing a Direct3D window by title gives a stale frame, so the script records the window's screen region instead.
+- Result: `docs/gallery/legacy.gif` (12 s, 560 px, 2.2 MB) in the README and `media/archive/legacy_v1.mp4` (20 s, 1280x720, gitignored). The legacy build itself is kept at `..\nemesis-legacy-build\` for the before/after video.

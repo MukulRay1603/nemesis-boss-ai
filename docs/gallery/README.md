@@ -4,7 +4,7 @@ Stills (and, for videos, file names in the gitignored `media/` folder) of every 
 
 | File | Version | Source |
 |---|---|---|
-| legacy (pending capture) | **Original project by Ray**: the April 2026 build, as built | `Unity Project/Build/Nemesis-ai.exe` (exe dated 2026-03-30, data 2026-04-02), captured unmodified |
+| legacy.gif | **Original project by Ray**: the April 2026 game, white boss and hunter, chest-height camera | Built from tag `v1.0-legacy` (0bff669) without code changes and recorded from its window on 2026-11-26 (`eval/capture_legacy.ps1`); full clip `media/archive/legacy_v1.mp4` |
 | 2026-11-23_1852_v1-light-arena-debug-panel.png | v1: light arena, white boss, elevated camera, first AI debug panel | test build before 73c12f6 |
 | 2026-11-23_1913_v2-dark-panels-hud.png | v2: dark arena, effects, energy blades, dark HUD panels | dac002d |
 | 2026-11-23_1923_v3-minimal-white-hud-fullres.png | v3: minimal white HUD, no panels | 99083b7 |
@@ -24,4 +24,4 @@ git worktree add ..\nemesis-archive <commit>
 & "..\nemesis-archive\Unity Project\Builds\Windows\Nemesis.exe" -batchmode -nemesisRecord 78 -fps 60 -seed 21 -sentis cpu -ffmpeg ffmpeg -out media\archive_<commit>
 ```
 
-The original build has no recorder, so it is captured from its window with ffmpeg screen capture instead.
+The original game has no recorder, so it is captured from its window with ffmpeg screen capture instead (`eval/capture_legacy.ps1`). Note: `Unity Project/Build/Nemesis-ai.exe` is not the legacy fight; it is the 30 March ML-Agents training environment, which waits for a trainer and does nothing on its own.

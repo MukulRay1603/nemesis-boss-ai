@@ -26,5 +26,5 @@ Release versions (1.0, 2.0, ...) are separate from policy names (v3, v4, v5: the
 
 | Version | Media |
 |---|---|
-| 1.0 legacy | `docs/gallery/legacy.gif` (pending: captured from the original `Nemesis-ai.exe`, unmodified) |
+| 1.0 legacy | [`gallery/legacy.gif`](gallery/legacy.gif), built from the tag without code changes and recorded from its window |
 | 2.0 to 2.2 | stills in [gallery/](gallery/README.md); clips in the gitignored `media/` folder |
