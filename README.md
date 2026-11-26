@@ -1,4 +1,4 @@
-﻿# Nemesis Boss AI
+# Nemesis Boss AI
 
 A boss fight in Unity where the boss's decisions come from a PPO policy (trained with ML-Agents, exported to ONNX, run in-game with Unity Sentis). The boss fights a scripted player bot in a walled arena. A separate Python bridge can add LLM-generated taunts.
 

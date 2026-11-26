@@ -1,4 +1,4 @@
-﻿# Version history
+# Version history
 
 Release versions (1.0, 2.0, ...) are separate from policy names (v3, v4, v5: the trained models). What each version of Nemesis was, what changed, and what was learned. The original build is kept unchanged in git: tag `v1.0-legacy` points at commit 0bff669. Details per change are in [BUILD_NOTES.md](BUILD_NOTES.md), numbers in [RESULTS.md](RESULTS.md), decisions in [DECISIONS.md](DECISIONS.md).
 
