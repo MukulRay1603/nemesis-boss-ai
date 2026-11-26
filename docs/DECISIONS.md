@@ -23,3 +23,4 @@ Each entry: what was decided, the options, the choice, and who chose. "Ray" = pr
 | D-017 | 2026-11-24 | Hosting | GitHub Pages; itch.io | Pending | Ray |
 | D-018 | 2026-11-24 | Which model ships | v3; v4; v5 | Pending the overnight results | Ray |
 | D-019 | 2026-11-24 | Special attack is dominant (found by v4) | Keep; raise its cost (stamina or cooldown); lower its damage; reward shaping for variety; co-trained RL hunter that learns to punish it (REDESIGN 2b) | Pending. Ray (2026-11-26): manual nerfs make the boss feel scripted; asked for research. Recommended: co-trained hunter | Ray |
+| D-020 | 2026-11-26 | Next AI direction | Nerf the special; personas; player imitation; co-trained hunter | Co-trained RL hunter in a self-play league (REDESIGN 2b, option A). Hunter uses the human moveset and decides every 0.2 s; league = current vs current, vs past snapshots, and 15% vs the scripted bot | Ray ("that seems viable") |

@@ -49,6 +49,15 @@ public class PlayerController : MonoBehaviour
     public static Vector2 VirtualMove;
     public static bool VirtualAttack, VirtualDash;
 
+    // ── Agent control (co-training, TrainingBridge -hunter 1). Same moveset as a human player:
+    // world-space move direction, attack and dash triggers. Off by default.
+    [System.NonSerialized] public bool agentControlled = false;
+    [System.NonSerialized] public Vector3 agentMove;
+    [System.NonSerialized] public bool agentAttack, agentDash;
+    public bool AttackReady => attackTimer <= 0f;
+    public bool DashReady => dashCdTimer <= 0f;
+    public bool Invulnerable => invulnTimer > 0f;
+
     // ── Components ─────────────────────────────────────────────────────────
     private Rigidbody rb;
     private Transform boss;
@@ -96,6 +105,8 @@ public class PlayerController : MonoBehaviour
         state = PlayerState.KeepDistance;
         dashTimer = dashCdTimer = invulnTimer = 0f;
         wantAttack = wantDash = false;
+        agentAttack = agentDash = false;
+        agentMove = Vector3.zero;
         attackTimer = 0f;
         dodgeTimer = 0f;
         retreatTimer = 0f;
@@ -147,6 +158,7 @@ public class PlayerController : MonoBehaviour
     // ──────────────────────────────────────────────────────────────────────
     void Update()
     {
+        if (agentControlled) return;
         if (!humanControlled || InputBlocked) { VirtualAttack = VirtualDash = false; return; }
         if (VirtualAttack) { wantAttack = true; VirtualAttack = false; }
         if (VirtualDash) { wantDash = true; VirtualDash = false; }
@@ -170,7 +182,14 @@ public class PlayerController : MonoBehaviour
         Vector3 fwd = cam != null ? Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up).normalized : Vector3.forward;
         Vector3 right = Vector3.Cross(Vector3.up, fwd);
         Vector3 move = Vector3.zero;
-        if (!InputBlocked)
+        if (agentControlled)
+        {
+            move = agentMove;
+            if (agentAttack) wantAttack = true;
+            if (agentDash) wantDash = true;
+            agentAttack = agentDash = false;
+        }
+        else if (!InputBlocked)
         {
             if (Input.GetKey(KeyCode.W)) move += fwd;
             if (Input.GetKey(KeyCode.S)) move -= fwd;
@@ -224,7 +243,7 @@ public class PlayerController : MonoBehaviour
     {
         // ← FIXED: only bail if boss transform is missing entirely
         if (boss == null) return;
-        if (humanControlled) { HumanFixedUpdate(); return; }
+        if (humanControlled || agentControlled) { HumanFixedUpdate(); return; }
 
         // Tick timers
         attackTimer -= Time.fixedDeltaTime;
@@ -413,7 +432,7 @@ public class PlayerController : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
-        if (humanControlled && invulnTimer > 0f) return;   // dash i-frames (play mode only)
+        if ((humanControlled || agentControlled) && invulnTimer > 0f) return;   // dash i-frames (human moveset only)
         playerHP -= damage;
     }
 }

@@ -95,3 +95,17 @@ The state at 0bff669 is reviewed in [AUDIT.md](AUDIT.md).
 
 ### Authorship
 Phase 0 is Ray's original work. Everything from 2026-11-23 on was written with an AI coding assistant, directed and reviewed by Ray: the files named in the entries above, plus edits to `BossAgent.cs`, `PlayerController.cs`, `ScriptedBoss.cs`, `TauntDisplay.cs` and the scene (FSM damage value). Whether to state this publicly is Ray's decision.
+
+## 2026-11-26: versions, legacy tag, co-trained hunter (AI-assisted)
+
+**Versions and GitHub**
+- `docs/VERSIONS.md`: release versions 1.0 (legacy) to 3.0 (planned) with what each step taught; README links it.
+- Original build tagged `v1.0-legacy` (0bff669) and pushed with main (Ray: "merge main to the same repo rn"). A `legacy` branch was refused by GitHub's email-privacy check on the old commits, so the tag alone preserves it.
+- `eval/capture_legacy.ps1`: records the original `Nemesis-ai.exe` from its window (ffmpeg gdigrab) into `media/archive/legacy_v1.mp4` and `docs/gallery/legacy.gif`. Waits for a free GPU lock.
+
+**Co-trained hunter** (D-020)
+- `PlayerController`: agent-control path that drives the human moveset (move direction, attack, dash with i-frames). Scripted bot and human play unchanged.
+- `TrainingBridge -hunter 1`: hunter decisions every 10 physics steps, 19 inputs (positions, HP, boss state and time left, whether the telegraph is the special, stamina, phase, own cooldowns), 14 actions relative to the boss. Message kinds 0 boss / 1 hunter / 2 episode end; the reply to an episode end picks agent or scripted hunter for the next fight. The boss-only protocol (`train_ppo.py`) is unchanged.
+- `training/train_league.py`: two PPO learners, snapshot pool (every 10 updates, 8 kept), per-fight assignment (current vs current; 20% current boss vs past hunter; 15% past boss vs current hunter; 15% current boss vs scripted bot). Logs win rates per matchup and the boss's special share per update, which is the arms-race chart.
+- Smoke test (2 instances, 6,144 rounds, boss started from v5): runs end to end, exports both ONNX models, all instances exit. Numbers from it are not results.
+- Next: the full run (needs Ray's OK, CPU for about 3 h), then a Sentis hunter brain in the game so evaluation and the AI Lab can show boss vs learned hunter.
