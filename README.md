@@ -4,6 +4,8 @@ A boss fight in Unity where the boss's decisions come from a PPO policy (trained
 
 ![Nemesis fight](media/preview.png)
 
+**Versions.** The original April 2026 build (white arena) is kept unchanged under tag [`v1.0-legacy`](../../tree/v1.0-legacy) and branch `legacy`. [docs/VERSIONS.md](docs/VERSIONS.md) lists every version since, what changed and what each step showed.
+
 ## What it does
 
 - **Policy-driven boss.** Every time the boss is idle it reads 14 observations and asks the ONNX policy for one of four actions: idle, attack, dodge or special attack. The chosen action then plays out through a fixed state machine: Idle, Telegraph (wind-up), Attack, Recovery (vulnerable), Dodge.
